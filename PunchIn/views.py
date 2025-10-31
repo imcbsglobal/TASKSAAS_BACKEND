@@ -24,6 +24,10 @@ from app1.models import Misel, AccMaster, AccUser
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# UTILITY FUNCTIONS - JWT & AUTHENTICATION
+# ============================================================================
+
 def decode_jwt_token(request):
     """Decode JWT token from Authorization header"""
     auth_header = request.META.get("HTTP_AUTHORIZATION")
@@ -51,6 +55,11 @@ def get_client_id_from_token(request):
         return payload.get('client_id')
     except Exception:
         return None
+
+
+# ============================================================================
+# SHOP LOCATION FEATURES
+# ============================================================================
 
 
 @api_view(['POST'])
@@ -197,7 +206,7 @@ def get_firms(request):
         logger.exception("Unexpected error in get_firms")
         return Response({'error': 'An unexpected error occurred'}, status=500)
 
-# shop location table 
+
 @api_view(['GET'])
 def get_table_data(request):
     """Get shop location data for authenticated client using optimized raw SQL"""
@@ -374,8 +383,58 @@ def update_location_status(request):
 
 
 @api_view(['POST'])
-def upload_image_to_r2(request):
-    return
+def update_punchin_verification(request):
+    """Update the status of a shop location"""
+    try:
+        payload = decode_jwt_token(request)
+        if not payload:
+            return Response({'error': 'Invalid or missing token'}, status=401)
+        
+        client_id = payload.get("client_id")
+        username = payload.get("username")
+
+        new_status = request.data.get('status')
+        shop_id = request.data.get('shop_id')
+        punchinId = request.data.get('id')
+        createdBy = request.data.get('createdBy')
+
+
+        if not shop_id:
+            return Response({"error": 'ShopId is required'}, status=400)
+       
+        if not new_status:
+            return Response({"error": 'Status is required'}, status=400)
+
+        if not punchinId :
+            return Response({"error":'Punchin Id required'},status=400)
+
+        with transaction.atomic():
+            updated_count = PunchIn.objects.filter(
+                client_id=client_id,
+                firm_id=shop_id,
+                created_by=createdBy,
+                id = punchinId
+            ).update(status=new_status)
+
+            if updated_count == 0:
+                return Response({'error': 'Shop not found or unauthorized'}, status=404)
+
+        return Response({'success': True, 'updated_count': updated_count}, status=200)
+
+    except MultipleObjectsReturned:
+        logger.error(f"Multiple ShopLocations found for client_id={client_id}, shop_id={shop_id}")
+        return Response({'error': 'Multiple shops found with same ID, please contact support'}, status=500)
+    except DatabaseError as e:
+        logger.error(f"Database error in punchin status update: {str(e)}")
+        return Response({'error': 'Database error'}, status=500)
+    except Exception as e:
+        logger.exception("Unexpected error while updating punchin status")
+        return Response({'error': 'Internal server error'}, status=500)
+
+
+# ============================================================================
+# PUNCH-IN/OUT FEATURES
+# ============================================================================
 
 @api_view(['POST'])
 def punchin(request):
@@ -903,6 +962,10 @@ def punchin_table(request):
         return Response({'error': 'Failed to get punch-in records'}, status=500)
 
 
+# ============================================================================
+# AREA MANAGEMENT FEATURES
+# ============================================================================
+
 @api_view(['GET'])
 def get_areas(request):
     try:
@@ -1062,6 +1125,20 @@ def update_area(request):
     except Exception as e:
         logger.error(f"Error in update_area: {str(e)}")
         return Response({'error': 'Failed to update user areas'}, status=500)
+
+
+# ============================================================================
+# IMAGE UPLOAD FEATURE
+# ============================================================================
+
+@api_view(['POST'])
+def upload_image_to_r2(request):
+    return
+
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
 
 @api_view(['GET'])
 def health_check(request):

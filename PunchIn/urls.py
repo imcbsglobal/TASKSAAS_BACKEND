@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     shop_location, get_firms, get_table_data, update_location_status,
     upload_image_to_r2, punchin, punchout, get_active_punchin,punchin_table,
-    get_areas, update_area, get_user_areas
+    get_areas, update_area, get_user_areas,update_punchin_verification
 )
 
 urlpatterns = [    
@@ -18,7 +18,7 @@ urlpatterns = [
     path("punch-out/<int:id>/", punchout, name="punchout"),
     path("punch-status/", get_active_punchin, name="punch-status"),
     path("punch-in/table/",punchin_table,name='punchin_table'),
-
+    path("punch-in/updateStatus", update_punchin_verification , name="update_verification"),
     #Area management
     path("get-areas/", get_areas, name="get-areas"),
     path("get-user-area", get_user_areas, name="get_user_area"),

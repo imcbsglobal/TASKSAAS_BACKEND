@@ -42,6 +42,8 @@ class PunchIn(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("completed", "Completed"),
+        ("rejected", "Rejected"),
+
     ]
 
     firm = models.ForeignKey(

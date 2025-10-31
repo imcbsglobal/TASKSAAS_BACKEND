@@ -12,6 +12,13 @@ CLOUDINARY_STORAGE={
     "API_SECRET": config("CLOUDINARY_API_SECRET"),
 }
 
+CLOUDFLARE_R2_BUCKET = config("CLOUDFLARE_R2_BUCKET")
+CLOUDFLARE_R2_BUCKET_ENDPOINT = config("CLOUDFLARE_R2_BUCKET_ENDPOINT")
+CLOUDFLARE_R2_ACCESS_KEY = config("CLOUDFLARE_R2_ACCESS_KEY")
+CLOUDFLARE_R2_SECRET_KEY = config("CLOUDFLARE_R2_SECRET_KEY")
+CLOUDFLARE_R2_PUBLIC_URL = config("CLOUDFLARE_R2_PUBLIC_URL")
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -111,11 +118,11 @@ WSGI_APPLICATION = 'task_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'task_sync_db',
+        'NAME': 'eway',
         'USER': 'postgres',
-        'PASSWORD': 'info@imc',
-        'HOST': '88.222.212.14',
-        'PORT': '5432',
+        'PASSWORD': 'admin',
+        'HOST': 'localhost',
+        'PORT': '5454',
         'TIME_ZONE': 'Asia/Kolkata',
     }
 }

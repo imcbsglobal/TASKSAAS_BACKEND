@@ -13,6 +13,9 @@ import jwt
 import logging
 import time
 import hashlib
+import boto3
+from botocore.exceptions import ClientError
+from botocore.config import Config as BotoConfig
 
 from .models import ShopLocation, PunchIn, UserAreas
 from .serializers import ShopLocationSerializer
@@ -113,68 +116,7 @@ def shop_location(request):
         logger.exception("Unexpected error in shop_location")
         return Response({'error': 'An unexpected error occurred'}, status=500)
 
-
-# @api_view(['GET'])
-# def get_firms(request):
-#     """Get all firms with their latest shop location coordinates"""
-#     try:
-#         payload = decode_jwt_token(request)
-#         if not payload:
-#             return Response({'error': 'Invalid or missing token'}, status=401)
-#         username = payload.get('username')
-#         client_id = payload.get('client_id')
-#         role = payload.get('role')
-
-#         if not client_id:
-#             return Response({'error': 'Invalid or missing token'}, status=401)
-
-#         # Prepare subquery for latest shop location
-#         latest_shop = ShopLocation.objects.filter(
-#             firm=OuterRef('pk'),
-#             client_id=client_id
-#         ).order_by('-created_at')
-
-#         if role== "Admin":
-#             firms = AccMaster.objects.filter(client_id=client_id).annotate(
-#                 latitude=Subquery(latest_shop.values('latitude')[:1]),
-#                 longitude=Subquery(latest_shop.values('longitude')[:1]),
-#             )
-#         else :
-#             userAreas = UserAreas.objects.filter(client_id = client_id , user = username).values_list('area_code',flat=True)
-#             print("U areas : ",userAreas)
-#             firms = AccMaster.objects.filter(client_id = client_id ,area__in =userAreas,LIKE  ).annotate(
-#                 latitude=Subquery(latest_shop.values('latitude')[:1]),
-#                 longitude=Subquery(latest_shop.values('longitude')[:1]),
-#             )
-            
-            
-
-#         # Fetch firms with latest location
-
-
-#         if not firms.exists():
-#             return Response({'success': True, 'firms': [], 'message': 'No firms found'}, status=200)
-
-#         # Build response data
-#         data = [
-#             {
-#                 'id': firm.code,
-#                 'firm_name': firm.name,
-#                 'latitude': float(firm.latitude) if firm.latitude is not None else None,
-#                 'area':firm.area,
-#                 'longitude': float(firm.longitude) if firm.longitude is not None else None,
-#             }
-#             for firm in firms
-#         ]
-
-#         return Response({'success': True, 'firms': data}, status=200)
-
-#     except DatabaseError as e:
-#         logger.error(f"Database error in get_firms: {str(e)}")
-#         return Response({'error': 'Database error'}, status=500)
-#     except Exception as e:
-#         logger.exception("Unexpected error in get_firms")
-#         return Response({'error': 'An unexpected error occurred'}, status=500)
+  
 @api_view(['GET'])
 def get_firms(request):
     """Get all firms with their latest shop location coordinates"""
@@ -431,98 +373,15 @@ def update_location_status(request):
         return Response({'error': 'Internal server error'}, status=500)
 
 
-@api_view(['GET'])
-def get_upload_signature(request):
-    """
-    Generate Cloudinary upload signature for authenticated users with restrictions
-    """
-    try:
-        # ✅ Authenticate user first
-        payload = decode_jwt_token(request)
-        if not payload:
-            return Response({'error': 'Authentication required'}, status=401)
-        
-        client_id = payload.get('client_id')
-        username = payload.get('username')
-        customer_name = request.query_params.get('customerName')
-        print("CustomerName: ",customer_name)
-
-        if not client_id or not username:
-            return Response({'error': 'Invalid token payload'}, status=401)
-        
-        timestamp = int(time.time())
-        today_str  = time.strftime("%Y-%m-%d")
-
-
-        logger.info(f"Generating signature for user: {username}, timestamp: {timestamp}")
-        
-        # ✅ Access Cloudinary config
-        cloudinary_config = settings.CLOUDINARY_STORAGE
-        api_secret = cloudinary_config['API_SECRET']
-        cloud_name = cloudinary_config['CLOUD_NAME']
-        api_key = cloudinary_config['API_KEY']
-        public_id = f"punch_images/{client_id}/{customer_name}/{username}{today_str}{uuid.uuid4().hex[:4]}"
-        # ✅ ONLY include parameters that will be signed
-        # Parameters that go into the signature generation
-        params_to_sign = {
-            'timestamp': timestamp,
-            'folder': f'punch_images/{client_id}/{customer_name}',
-            'allowed_formats': 'jpg,png,jpeg',
-            'tags': f'client_{client_id},user_{username}',
-            'public_id':public_id
-        }
-        
-        # Additional params for frontend validation (NOT signed)
-        additional_params = {
-            'max_file_size': 5000000,  # 5MB limit - frontend validation only
-            'resource_type': 'image'   # Not included in signature
-        }
-        
-        # ✅ Create signature string - ONLY signed parameters
-        params_list = []
-        for key in sorted(params_to_sign.keys()):
-            params_list.append(f"{key}={params_to_sign[key]}")
-        
-        params_string = "&".join(params_list)
-        signature_string = params_string + api_secret
-        signature = hashlib.sha1(signature_string.encode('utf-8')).hexdigest()
-        
-        # ✅ Log for debugging
-        logger.info(f"Params to sign: {params_string}")
-        logger.info(f"Generated signature: {signature}")
-        
-        response_data = {
-            'success': True,
-            'data': {
-                "timestamp": timestamp,
-                "signature": signature,
-                "cloudName": cloud_name,
-                # Signed parameters
-                "folder": params_to_sign['folder'],
-                "allowed_formats": params_to_sign['allowed_formats'],
-                "tags": params_to_sign['tags'],
-                # Additional parameters for frontend (not signed)
-                "max_file_size": additional_params['max_file_size'],
-                'public_id': public_id,
-                "success": True
-            }
-        }
-        
-        logger.info(f"Successfully generated signature for user: {username}")
-        
-        return Response(response_data, status=200)
-        
-    except KeyError as e:
-        logger.error(f"Missing Cloudinary configuration: {str(e)}")
-        return Response({'error': 'Service configuration error', 'success': False}, status=500)
-    except Exception as e:
-        logger.error(f"Error generating upload signature for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
-        return Response({'error': 'Failed to generate upload signature', 'success': False}, status=500)
+@api_view(['POST'])
+def upload_image_to_r2(request):
+    return
 
 @api_view(['POST'])
 def punchin(request):
     """
     Handle punch-in functionality with image upload and location tracking
+    Accepts image file directly and uploads to Cloudflare R2
     """
     try:
         # ✅ Authenticate user
@@ -541,9 +400,9 @@ def punchin(request):
         firm_code = request.data.get('customerCode')
         latitude = request.data.get('latitude')
         longitude = request.data.get('longitude')
-        photo_url = request.data.get('photo_url')  # Cloudinary URL after upload
         notes = request.data.get('notes', '')
         address = request.data.get('address', '')
+        image_file = request.FILES.get('image')  # Get image file from frontend
 
         #  Validate required fields
         if not firm_code:
@@ -552,8 +411,17 @@ def punchin(request):
         if not latitude or not longitude:
             return Response({'error': 'Location coordinates are required'}, status=400)
 
-        if not photo_url:
-            return Response({'error': 'Photo is required for punch-in'}, status=400)
+        if not image_file:
+            return Response({'error': 'Image file is required for punch-in'}, status=400)
+        
+        # ✅ Validate image file
+        max_size = 5 * 1024 * 1024  # 5MB
+        if image_file.size > max_size:
+            return Response({'error': 'Image size must be less than 5MB'}, status=400)
+
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png']
+        if image_file.content_type not in allowed_types:
+            return Response({'error': 'Only JPG, JPEG, and PNG images are allowed'}, status=400)
 
         #  Validate coordinates
         try:
@@ -586,6 +454,77 @@ def punchin(request):
         #         'existing_punchin_id': existing_punchin.id,
         #         'punchin_time': existing_punchin.punchin_time.isoformat()
         #     }, status=400)
+
+        # ✅ Upload image to Cloudflare R2
+        try:
+            timestamp = int(time.time())
+            today_str = time.strftime("%Y-%m-%d")
+            
+            # Access Cloudflare R2 config
+            r2_bucket = settings.CLOUDFLARE_R2_BUCKET
+            r2_endpoint = settings.CLOUDFLARE_R2_BUCKET_ENDPOINT
+            r2_access_key = settings.CLOUDFLARE_R2_ACCESS_KEY
+            r2_secret_key = settings.CLOUDFLARE_R2_SECRET_KEY
+            r2_access_url = settings.CLOUDFLARE_R2_PUBLIC_URL
+
+            logger.info(f"R2 Config - Bucket: {r2_bucket}, Endpoint: {r2_endpoint}")
+            
+            # Create S3 client for Cloudflare R2
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=r2_endpoint,
+                aws_access_key_id=r2_access_key,
+                aws_secret_access_key=r2_secret_key,
+                region_name='auto',
+                config=BotoConfig(signature_version='s3v4')
+            )
+            
+            # Determine file extension
+            file_extension = image_file.name.split('.')[-1].lower()
+            if file_extension not in ['jpg', 'jpeg', 'png']:
+                file_extension = 'jpg'
+            
+            # Generate unique object key (without leading slash)
+            customer_name = firm.name.replace(' ', '_').replace('/', '-')
+            object_key = f"punch_images/{client_id}/{customer_name}/{username}_{today_str}_{uuid.uuid4().hex[:8]}.{file_extension}"
+            
+            logger.info(f"Uploading to R2 - Bucket: {r2_bucket}, Key: {object_key}")
+            
+            # Reset file pointer to beginning
+            image_file.seek(0)
+            
+            # Upload file to R2
+            s3_client.upload_fileobj(
+                image_file,
+                r2_bucket,
+                object_key,
+                ExtraArgs={
+                    'ContentType': image_file.content_type,
+                    'Metadata': {
+                        'uploaded_by': username,
+                        'client_id': str(client_id),
+                        'firm_code': firm_code,
+                        'upload_timestamp': str(timestamp)
+                    }
+                }
+            )
+            
+            # Generate public URL
+            photo_url = f"{r2_access_url}/{object_key}"
+            logger.info(f"Image uploaded successfully to R2: {photo_url}")
+            
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_message = e.response.get('Error', {}).get('Message', str(e))
+            logger.error(f"R2 ClientError - Code: {error_code}, Message: {error_message}")
+            logger.error(f"R2 Config being used - Bucket: {r2_bucket}, Endpoint: {r2_endpoint}")
+            return Response({
+                'error': 'Failed to upload image to storage',
+                'details': f'Storage error: {error_code}'
+            }, status=500)
+        except Exception as e:
+            logger.error(f"Unexpected error during R2 upload: {str(e)}", exc_info=True)
+            return Response({'error': 'Failed to upload image'}, status=500)
 
         #  Create punch-in record
         with transaction.atomic():
@@ -661,7 +600,6 @@ def punchout(request ,id):
         active_punchin = PunchIn.objects.filter(
             client_id=client_id,
             created_by=username,
-            punchin_time__date=today,
             punchout_time__isnull=True,
             id=punchinId
         ).first()

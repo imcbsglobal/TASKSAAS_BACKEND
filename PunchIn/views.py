@@ -569,6 +569,7 @@ def punchin(request):
             )
             
             # Generate public URL
+            # photo_url = f"{r2_endpoint}/{object_key}"
             photo_url = f"{r2_access_url}/{object_key}"
             logger.info(f"Image uploaded successfully to R2: {photo_url}")
             

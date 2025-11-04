@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-%czi_^6texrx)h7@d#x58rp7s#(jl*#idtou14ol%-_%z=)bm4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['taskprime.app','127.0.0.1']
+ALLOWED_HOSTS = ['taskprime.app','127.0.0.1','192.168.1.70']
 
 
 CORS_ALLOW_HEADERS = ['*']
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://taskprime.app",  
+    "https://192.168.1.70:5173"
 ]
 from datetime import timedelta
 

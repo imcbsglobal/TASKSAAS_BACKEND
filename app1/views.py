@@ -74,7 +74,6 @@ def login(request):
 
         except Exception as e:
         # Log the error in production
-            print(f"Error fetching AllowedMenuIds: {e}")
             return Response({'success': False, "error": "Error fetching AllowedMenuIds"}, status=500)
 
      
@@ -114,37 +113,26 @@ def get_users(request):
 @api_view(['GET'])
 def get_misel_data(request):
     try:
-        # Debug: Print all headers
-        print("=== DEBUG: All request headers ===")
-        for key, value in request.META.items():
-            if 'HTTP_' in key or key in ['CONTENT_TYPE', 'CONTENT_LENGTH']:
-                print(f"{key}: {value}")
-        
         # Get token from Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION')
-        print(f"=== DEBUG: Authorization header: {auth_header} ===")
         
         if not auth_header:
             return Response({
                 'success': False, 
-                'error': 'Missing authorization header',
-                'debug': 'No HTTP_AUTHORIZATION found in request.META'
+                'error': 'Missing authorization header'
             }, status=401)
         
         if not auth_header.startswith('Bearer '):
             return Response({
                 'success': False, 
-                'error': 'Invalid authorization header format',
-                'debug': f'Header value: {auth_header}'
+                'error': 'Invalid authorization header format'
             }, status=401)
         
         token = auth_header.split(' ')[1]
-        print(f"=== DEBUG: Extracted token: {token[:50]}... ===")
         
         try:
             # Decode the JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            print(f"=== DEBUG: Token payload: {payload} ===")
             client_id = payload.get('client_id')
             
             if not client_id:
@@ -160,7 +148,6 @@ def get_misel_data(request):
         return Response({'success': True, 'data': list(misel_data)})
         
     except Exception as e:
-        print(f"=== DEBUG: Exception: {str(e)} ===")
         return Response({'success': False, 'error': str(e)}, status=500)
     
 

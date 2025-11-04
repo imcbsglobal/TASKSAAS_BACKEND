@@ -39,11 +39,10 @@ class ShopLocation(models.Model):
 
 
 class PunchIn(models.Model):
-    STATUS_CHOICES = [
+    STATUS_CHOICES =[
+        ("verified", "Verified"),
         ("pending", "Pending"),
-        ("completed", "Completed"),
         ("rejected", "Rejected"),
-
     ]
 
     firm = models.ForeignKey(

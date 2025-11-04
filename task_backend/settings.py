@@ -6,11 +6,6 @@ import cloudinary.uploader
 import cloudinary.api
 
 
-# CLOUDINARY_STORAGE={
-#     "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME"),
-#     "API_KEY": config("CLOUDINARY_API_KEY"),
-#     "API_SECRET": config("CLOUDINARY_API_SECRET"),
-# }
 
 CLOUDFLARE_R2_BUCKET = config("CLOUDFLARE_R2_BUCKET")
 CLOUDFLARE_R2_BUCKET_ENDPOINT = config("CLOUDFLARE_R2_BUCKET_ENDPOINT")
@@ -28,18 +23,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%czi_^6texrx)h7@d#x58rp7s#(jl*#idtou14ol%-_%z=)bm4'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-%czi_^6texrx)h7@d#x58rp7s#(jl*#idtou14ol%-_%z=)bm4')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['taskprime.app','127.0.0.1','192.168.1.70']
+# Parse ALLOWED_HOSTS from environment variable
+ALLOWED_HOSTS = [host.strip() for host in config('ALLOWED_HOSTS', default='taskprime.app,127.0.0.1,192.168.1.70').split(',')]
 
 
 CORS_ALLOW_HEADERS = ['*']
 CORS_ALLOW_METHODS = ['*']
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
+
+# For development only - remove in production
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
 
 # Application definition
 
@@ -60,17 +61,17 @@ INSTALLED_APPS = [
     'accesscontroll'
 ]
 
-# Add at the bottom
+# Parse CORS origins from environment variable
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://taskprime.app",  
-    "https://192.168.1.70:5173"
+    origin.strip() 
+    for origin in config('CORS_ALLOWED_ORIGINS', default='http://localhost:5173,https://taskprime.app,https://192.168.1.70:5173').split(',')
 ]
+
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=config('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', default=60, cast=int)),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=config('JWT_REFRESH_TOKEN_LIFETIME_DAYS', default=1, cast=int)),
     'ROTATE_REFRESH_TOKENS': True,
 }
 REST_FRAMEWORK = {
@@ -118,13 +119,18 @@ WSGI_APPLICATION = 'task_backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'eway',
-        'USER': 'postgres',
-        'PASSWORD': 'admin',
-        'HOST': 'localhost',
-        'PORT': '5454',
-        'TIME_ZONE': 'Asia/Kolkata',
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
+        'NAME': config('DB_NAME', default='eway'),
+        'USER': config('DB_USER', default='postgres'),
+        'PASSWORD': config('DB_PASSWORD', default='admin'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+        'TIME_ZONE': config('DB_TIMEZONE', default='Asia/Kolkata'),
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000',  # 30 seconds query timeout
+        },
+        'CONN_MAX_AGE': 600,  # Connection pooling - 10 minutes
     }
 }
 
@@ -153,7 +159,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Kolkata'
+TIME_ZONE = config('DB_TIMEZONE', default='Asia/Kolkata')
 
 USE_I18N = True
 
@@ -177,9 +183,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Cloudinary Configuration
-cloudinary.config(
-    cloud_name=config("CLOUDINARY_CLOUD_NAME"),
-    api_key=config("CLOUDINARY_API_KEY"),
-    api_secret=config("CLOUDINARY_API_SECRET"),
-)
+
+

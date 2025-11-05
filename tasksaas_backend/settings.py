@@ -93,7 +93,7 @@ MIDDLEWARE = [
 ]
 
 
-ROOT_URLCONF = 'task_backend.urls'
+ROOT_URLCONF = 'tasksaas_backend.urls'
 
 TEMPLATES = [
     {
@@ -111,7 +111,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'task_backend.wsgi.application'
+WSGI_APPLICATION = 'tasksaas_backend.wsgi.application'
 
 
 # Database

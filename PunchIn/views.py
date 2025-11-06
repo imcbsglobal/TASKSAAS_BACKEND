@@ -555,7 +555,7 @@ def punchin(request):
         return Response({'error': 'Punch-in failed'}, status=500)
 
 @api_view(['POST'])
-def punchout(request ,id):
+def punchout(request, id):
     """
     Handle punch-out functionality
     """
@@ -564,39 +564,44 @@ def punchout(request ,id):
         payload = decode_jwt_token(request)
         if not payload:
             return Response({'error': 'Authentication required'}, status=401)
-        
+
         client_id = payload.get('client_id')
         username = payload.get('username')
 
         if not client_id or not username:
             return Response({'error': 'Invalid token payload'}, status=401)
 
+        # ✅ Use ID from URL parameter
         punchinId = id
-        print(punchinId)
 
-        # ✅ Get optional data
+        # ✅ Get optional data from request body
         notes = request.data.get('notes', '')
 
-        # ✅ Find active punch-in record
+        # ✅ Find active punch-in record (must be punched in and not punched out yet)
         from django.utils import timezone
         today = timezone.now().date()
-        
+
         active_punchin = PunchIn.objects.filter(
+            id=punchinId,
             client_id=client_id,
             created_by=username,
-            punchout_time__isnull=True,
-            id=punchinId
+            punchout_time__isnull=True  # Must not be punched out yet
         ).first()
 
         if not active_punchin:
             return Response({
-                'error': 'No active punch-in found for today'
+                'error': 'No active punch-in found with the provided ID',
+                'details': {
+                    'punchin_id': punchinId,
+                    'client_id': client_id,
+                    'username': username,
+                    'note': 'Record may already be punched out or belong to different user'
+                }
             }, status=400)
 
         # ✅ Update punch-out time
         with transaction.atomic():
             active_punchin.punchout_time = timezone.now()
-            active_punchin.status = 'completed'
             if notes:
                 active_punchin.notes = (active_punchin.notes + f"\nPunch-out notes: {notes}").strip()
             active_punchin.save()

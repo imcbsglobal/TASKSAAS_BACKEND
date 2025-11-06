@@ -7,15 +7,9 @@ from django.db.models import OuterRef, Subquery
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from decimal import Decimal, InvalidOperation
 from django.http import JsonResponse
-import uuid
 
 import jwt
 import logging
-import time
-import hashlib
-import boto3
-from botocore.exceptions import ClientError
-from botocore.config import Config as BotoConfig
 
 from .models import ShopLocation, PunchIn, UserAreas
 from .serializers import ShopLocationSerializer
@@ -514,86 +508,14 @@ def punchin(request):
         #         'punchin_time': existing_punchin.punchin_time.isoformat()
         #     }, status=400)
 
-        # ✅ Upload image to Cloudflare R2
-        try:
-            timestamp = int(time.time())
-            today_str = time.strftime("%Y-%m-%d")
-            
-            # Access Cloudflare R2 config
-            r2_bucket = settings.CLOUDFLARE_R2_BUCKET
-            r2_endpoint = settings.CLOUDFLARE_R2_BUCKET_ENDPOINT
-            r2_access_key = settings.CLOUDFLARE_R2_ACCESS_KEY
-            r2_secret_key = settings.CLOUDFLARE_R2_SECRET_KEY
-            r2_access_url = settings.CLOUDFLARE_R2_PUBLIC_URL
-
-            logger.info(f"R2 Config - Bucket: {r2_bucket}, Endpoint: {r2_endpoint}")
-            
-            # Create S3 client for Cloudflare R2
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=r2_endpoint,
-                aws_access_key_id=r2_access_key,
-                aws_secret_access_key=r2_secret_key,
-                region_name='auto',
-                config=BotoConfig(signature_version='s3v4')
-            )
-            
-            # Determine file extension
-            file_extension = image_file.name.split('.')[-1].lower()
-            if file_extension not in ['jpg', 'jpeg', 'png']:
-                file_extension = 'jpg'
-            
-            # Generate unique object key (without leading slash)
-            customer_name = firm.name.replace(' ', '_').replace('/', '-')
-            object_key = f"punch_images/{client_id}/{customer_name}/{username}_{today_str}_{uuid.uuid4().hex[:8]}.{file_extension}"
-            
-            logger.info(f"Uploading to R2 - Bucket: {r2_bucket}, Key: {object_key}")
-            
-            # Reset file pointer to beginning
-            image_file.seek(0)
-            
-            # Upload file to R2
-            s3_client.upload_fileobj(
-                image_file,
-                r2_bucket,
-                object_key,
-                ExtraArgs={
-                    'ContentType': image_file.content_type,
-                    'Metadata': {
-                        'uploaded_by': username,
-                        'client_id': str(client_id),
-                        'firm_code': firm_code,
-                        'upload_timestamp': str(timestamp)
-                    }
-                }
-            )
-            
-            # Generate public URL
-            # photo_url = f"{r2_endpoint}/{object_key}"
-            photo_url = f"{r2_access_url}/{object_key}"
-            logger.info(f"Image uploaded successfully to R2: {photo_url}")
-            
-        except ClientError as e:
-            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
-            error_message = e.response.get('Error', {}).get('Message', str(e))
-            logger.error(f"R2 ClientError - Code: {error_code}, Message: {error_message}")
-            logger.error(f"R2 Config being used - Bucket: {r2_bucket}, Endpoint: {r2_endpoint}")
-            return Response({
-                'error': 'Failed to upload image to storage',
-                'details': f'Storage error: {error_code}'
-            }, status=500)
-        except Exception as e:
-            logger.error(f"Unexpected error during R2 upload: {str(e)}", exc_info=True)
-            return Response({'error': 'Failed to upload image'}, status=500)
-
-        #  Create punch-in record
+        #  Create punch-in record with image
         with transaction.atomic():
             punchin_record = PunchIn.objects.create(
                 firm=firm,
                 client_id=client_id,
                 latitude=lat,
                 longitude=lng,
-                photo_url=photo_url,
+                photo=image_file,  # Django will handle file storage automatically
                 address=address,
                 notes=notes,
                 created_by=username,
@@ -603,6 +525,9 @@ def punchin(request):
             logger.info(f"Punch-in created successfully for user {username}, ID: {punchin_record.id}")
 
         # ✅ Prepare response data
+        # Photo URL will be from Cloudflare R2
+        photo_url = punchin_record.photo.url if punchin_record.photo else None
+        
         response_data = {
             'success': True,
             'message': 'Punch-in recorded successfully',
@@ -613,7 +538,7 @@ def punchin(request):
                 'punchin_time': punchin_record.punchin_time.isoformat(),
                 'latitude': float(punchin_record.latitude),
                 'longitude': float(punchin_record.longitude),
-                'photo_url': punchin_record.photo_url,
+                'photo_url': photo_url,
                 'address': punchin_record.address,
                 'status': punchin_record.status,
                 'created_by': punchin_record.created_by
@@ -628,7 +553,6 @@ def punchin(request):
     except Exception as e:
         logger.error(f"Error in punchin for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
         return Response({'error': 'Punch-in failed'}, status=500)
-
 
 @api_view(['POST'])
 def punchout(request ,id):
@@ -738,6 +662,9 @@ def get_active_punchin(request):
             # User is currently punched in
             work_duration = timezone.now() - active_punchin.punchin_time
             hours = work_duration.total_seconds() / 3600
+            
+            # Photo URL from Cloudflare R2
+            photo_url = active_punchin.photo.url if active_punchin.photo else None
 
             response_data = {
                 'success': True,
@@ -749,7 +676,7 @@ def get_active_punchin(request):
                     'punchin_time': active_punchin.punchin_time.isoformat(),
                     'current_work_hours': round(hours, 2),
                     'seconds':work_duration,
-                    'photo_url': active_punchin.photo_url,
+                    'photo_url': photo_url,
                     'address': active_punchin.address,
                     'status': active_punchin.status
                 }
@@ -831,7 +758,7 @@ def punchin_table(request):
                 p.longitude,
                 p.punchin_time,
                 p.punchout_time,
-                p.photo_url,
+                p.photo,
                 p.address,
                 p.notes,
                 p.status,
@@ -857,7 +784,7 @@ def punchin_table(request):
                 p.longitude,
                 p.punchin_time,
                 p.punchout_time,
-                p.photo_url,
+                p.photo,
                 p.address,
                 p.notes,
                 p.status,
@@ -921,6 +848,14 @@ def punchin_table(request):
                         work_duration_hours = round(duration.total_seconds() / 3600, 2)
                 except Exception:
                     work_duration_hours = None
+            
+            # Build photo URL from Cloudflare R2
+            photo_path = row_dict.get('photo')
+            if photo_path:
+                # Construct full R2 URL
+                photo_url = f"{settings.CLOUDFLARE_R2_PUBLIC_URL}/{photo_path}" if not photo_path.startswith('http') else photo_path
+            else:
+                photo_url = None
 
             # Build response record
             record = {
@@ -933,7 +868,7 @@ def punchin_table(request):
                 'punchin_time': punchin_time,
                 'punchout_time': punchout_time,
                 'work_duration_hours': work_duration_hours,
-                'photo_url': row_dict['photo_url'],
+                'photo_url': photo_url,
                 'address': row_dict['address'] or '',
                 'notes': row_dict['notes'] or '',
                 'status': row_dict['status'] or 'pending',

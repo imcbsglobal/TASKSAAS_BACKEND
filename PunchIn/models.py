@@ -1,5 +1,30 @@
 from django.db import models
 from app1.models import Misel,AccMaster,AccUser  # import Misel model from your main app
+import uuid
+import time
+
+
+def punchin_photo_path(instance, filename):
+    """
+    Generate custom file path for punch-in photos
+    Format: punch_images/{client_id}/{customer_name}/{username}_{date}_{uuid}.{ext}
+    Matches old format exactly
+    """
+    # Get file extension
+    file_extension = filename.split('.')[-1].lower()
+    if file_extension not in ['jpg', 'jpeg', 'png']:
+        file_extension = 'jpg'
+    
+    # Format date
+    today_str = time.strftime("%Y-%m-%d")
+    
+    # Clean customer name for file path (same as old code)
+    customer_name = instance.firm.name.replace(' ', '_').replace('/', '-')
+    
+    # Generate object key exactly like old code
+    object_key = f"punch_images/{instance.client_id}/{customer_name}/{instance.created_by}_{today_str}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    
+    return object_key
 
 
 class ShopLocation(models.Model):
@@ -65,7 +90,7 @@ class PunchIn(models.Model):
     created_by = models.CharField(max_length=64)  # username from JWT
 
     # Location and photo
-    photo_url = models.URLField(max_length=500, null=True, blank=True)
+    photo = models.ImageField(upload_to=punchin_photo_path, null=True, blank=True)
     address = models.TextField(blank=True, null=True)  # Optional address
     notes = models.TextField(blank=True, null=True)  # Optional notes
 

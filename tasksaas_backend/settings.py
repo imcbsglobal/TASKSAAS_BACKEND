@@ -7,12 +7,26 @@ import cloudinary.api
 
 
 
+# Cloudflare R2 Configuration
 CLOUDFLARE_R2_BUCKET = config("CLOUDFLARE_R2_BUCKET")
 CLOUDFLARE_R2_BUCKET_ENDPOINT = config("CLOUDFLARE_R2_BUCKET_ENDPOINT")
 CLOUDFLARE_R2_ACCESS_KEY = config("CLOUDFLARE_R2_ACCESS_KEY")
 CLOUDFLARE_R2_SECRET_KEY = config("CLOUDFLARE_R2_SECRET_KEY")
 CLOUDFLARE_R2_PUBLIC_URL = config("CLOUDFLARE_R2_PUBLIC_URL")
 
+# AWS S3 / Cloudflare R2 Settings
+AWS_ACCESS_KEY_ID = CLOUDFLARE_R2_ACCESS_KEY
+AWS_SECRET_ACCESS_KEY = CLOUDFLARE_R2_SECRET_KEY
+AWS_STORAGE_BUCKET_NAME = CLOUDFLARE_R2_BUCKET
+AWS_S3_ENDPOINT_URL = CLOUDFLARE_R2_BUCKET_ENDPOINT
+AWS_S3_REGION_NAME = 'auto'  # Cloudflare R2 uses 'auto'
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_S3_VERIFY = True
+AWS_S3_CUSTOM_DOMAIN = CLOUDFLARE_R2_PUBLIC_URL.replace('https://', '').replace('http://', '')
+
+# Use Cloudflare R2 for default file storage
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -52,6 +66,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'storages',  # For Cloudflare R2 storage
     'app1',
     'PunchIn',
     'corsheaders',

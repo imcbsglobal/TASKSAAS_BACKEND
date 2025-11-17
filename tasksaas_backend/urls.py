@@ -26,5 +26,8 @@ urlpatterns = [
     path('api/debtors/', include('DebtorsAPI.urls')),
     path('api/',include('accesscontroll.urls')),
     path('api/suppiers_api/', include('suppiers_api.urls')),
+    path('api/users_api/', include('users_api.urls')),
+    path('api/area/', include('area.urls')),
+
     
 ]

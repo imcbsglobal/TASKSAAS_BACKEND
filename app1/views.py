@@ -56,7 +56,8 @@ def login(request):
     "user-menu",
     "settings",
     "users",
-    "master-debtors"
+    "master-debtors",
+    "area-table",
     ]
     else :    
         try:

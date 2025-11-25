@@ -73,7 +73,9 @@ INSTALLED_APPS = [
     'cloudinary',
     'DebtorsAPI',
     'suppiers_api',
-    'accesscontroll'
+    'accesscontroll',
+    'users_api',
+    'area',
 ]
 
 # Parse CORS origins from environment variable

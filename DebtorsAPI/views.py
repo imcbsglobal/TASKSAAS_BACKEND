@@ -12,7 +12,6 @@ from django.conf import settings
 def get_debtors_list(request):
     """Return all debtors with Balance > 0 (Balance = debit - credit)"""
     try:
-        # Get token from Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION')
         if not auth_header or not auth_header.startswith('Bearer '):
             return Response({'success': False, 'error': 'Missing or invalid authorization header'}, status=401)
@@ -26,10 +25,10 @@ def get_debtors_list(request):
         except jwt.InvalidTokenError:
             return Response({'success': False, 'error': 'Invalid token'}, status=401)
 
-        # Get all accounts where Balance > 0
+        # Include 'area' also
         debtors = (
             AccMaster.objects.filter(client_id=client_id)
-            .values('code', 'name', 'place', 'phone2', 'debit', 'credit')
+            .values('code', 'name', 'place', 'phone2', 'debit', 'credit', 'area')
         )
 
         result = []
@@ -40,6 +39,7 @@ def get_debtors_list(request):
                     'code': d['code'],
                     'name': d['name'],
                     'place': d['place'],
+                    'area': d['area'],   # 👈 Added here
                     'phone': d['phone2'],
                     'balance': round(balance, 2),
                 })
@@ -47,3 +47,4 @@ def get_debtors_list(request):
         return Response({'success': True, 'data': result})
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=500)
+

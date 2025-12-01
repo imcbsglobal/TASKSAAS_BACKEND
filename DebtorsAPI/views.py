@@ -20,7 +20,7 @@ def get_debtors_list(request):
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         client_id = payload.get('client_id')
 
-        # Include super_code also 👇
+        # Fetch ALL accounts for this client_id
         debtors = (
             AccMaster.objects.filter(client_id=client_id)
             .values('code', 'name', 'place', 'phone2', 'debit', 'credit', 'area', 'super_code')
@@ -28,20 +28,23 @@ def get_debtors_list(request):
 
         result = []
         for d in debtors:
-            balance = float(d['debit'] or 0) - float(d['credit'] or 0)
-            if balance > 0:
-                result.append({
-                    'code': d['code'],
-                    'name': d['name'],
-                    'place': d['place'],
-                    'area': d['area'],
-                    'phone': d['phone2'],
-                    'super_code': d['super_code'],  # 👈 Added here
-                    'balance': round(balance, 2),
-                })
+            debit = float(d['debit'] or 0)
+            credit = float(d['credit'] or 0)
+            balance = round(debit - credit, 2)
+
+            result.append({
+                'code': d['code'],
+                'name': d['name'],
+                'place': d['place'],
+                'area': d['area'],
+                'phone': d['phone2'],
+                'super_code': d['super_code'],
+                'balance': balance,
+            })
 
         return Response({'success': True, 'data': result})
 
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=500)
+
 

@@ -58,6 +58,7 @@ def login(request):
     "users",
     "master-debtors",
     "area-table",
+    "master-suppliers"
     ]
     else :    
         try:

@@ -133,3 +133,80 @@ class CashAndBankAccMaster(models.Model):
         db_table = 'cashandbankaccmaster'
         managed = False  # Since the table already exists
         unique_together = ('code', 'client_id')
+
+
+
+class AccProduct(models.Model):
+    code = models.CharField(max_length=30, primary_key=True)
+    name = models.CharField(max_length=200, blank=True, null=True)
+    taxcode = models.CharField(max_length=10, blank=True, null=True)
+    product = models.CharField(max_length=100, blank=True, null=True)
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    unit = models.CharField(max_length=20, blank=True, null=True)
+    defected = models.CharField(max_length=5, blank=True, null=True)
+    text6 = models.CharField(max_length=200, blank=True, null=True)
+    settings = models.CharField(max_length=200, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_product'
+        managed = False
+
+
+class AccProductBatch(models.Model):
+    productcode = models.ForeignKey(
+        AccProduct,
+        on_delete=models.DO_NOTHING,
+        db_column='productcode',
+        related_name='batches'
+    )
+    salesprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    secondprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    thirdprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    fourthprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    nlc1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True)
+    bmrp = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    expirydate = models.DateField(null=True, blank=True)
+    modified = models.DateField(null=True, blank=True)
+    modifiedtime = models.TimeField(null=True, blank=True)
+    settings = models.CharField(max_length=200, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productbatch'
+        managed = False
+
+
+class AccProductPhoto(models.Model):
+    code = models.ForeignKey(
+        AccProduct,
+        on_delete=models.DO_NOTHING,
+        db_column='code',
+        related_name='photos'
+    )
+    url = models.CharField(max_length=500, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productphoto'
+        managed = False
+
+
+
+class AccPriceCode(models.Model):
+    code = models.CharField(max_length=2, primary_key=True)
+    name = models.CharField(max_length=30)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_pricecode'
+        managed = False
+        unique_together = ('code', 'client_id')
+
+    def __str__(self):
+        return self.name
+
+

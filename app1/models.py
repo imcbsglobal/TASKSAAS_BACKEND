@@ -239,7 +239,8 @@ class AccGoddown(models.Model):
 
     class Meta:
         db_table = 'acc_goddown'
-        managed = True
+        managed = False
+
 
 
 
@@ -253,7 +254,7 @@ class AccGoddownStock(models.Model):
 
     class Meta:
         db_table = 'acc_goddownstock'
-        managed = True
+        managed = False
 
 
 class AccDepartments(models.Model):

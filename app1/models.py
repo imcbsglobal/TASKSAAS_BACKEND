@@ -200,17 +200,15 @@ class AccPriceCode(models.Model):
         return self.name
 
 
-
 class AccProductPhoto(models.Model):
-    """Product photos table"""
     id = models.AutoField(primary_key=True)
-    code = models.CharField(max_length=30, blank=True, null=True)
-    url = models.CharField(max_length=300, blank=True, null=True)
+    code = models.CharField(max_length=30)
+    url = models.CharField(max_length=300)
     client_id = models.CharField(max_length=100)
 
     class Meta:
         db_table = 'acc_productphoto'
-        managed = True
+        managed = False   ✅
         indexes = [
             models.Index(fields=['code', 'client_id']),
         ]
@@ -228,7 +226,7 @@ class AccSalesTypes(models.Model):
 
     class Meta:
         db_table = 'acc_sales_types'
-        managed = True
+        managed = False
 
 
 
@@ -286,7 +284,7 @@ class Collection(models.Model):
 
     class Meta:
         db_table = 'collection'
-        managed = True
+        managed = False
         indexes = [
             models.Index(fields=['client_id']),
         ]

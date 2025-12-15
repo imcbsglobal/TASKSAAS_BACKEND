@@ -201,6 +201,45 @@ class AccProductPhoto(models.Model):
 
 
 
+
+# =====================================================
+# ✅ GODDOWN MODELS (THIS IS WHAT YOU ASKED)
+# =====================================================
+
+# -------------------------------
+# GODDOWN MASTER
+# -------------------------------
+class AccGoddown(models.Model):
+    goddownid = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=200)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddown'
+        managed = False
+
+    def __str__(self):
+        return self.name
+
+
+# -------------------------------
+# GODDOWN STOCK
+# -------------------------------
+class AccGoddownStock(models.Model):
+    id = models.AutoField(primary_key=True)
+    goddownid = models.CharField(max_length=50)
+    product = models.CharField(max_length=200)   # matches acc_product.code
+    quantity = models.DecimalField(max_digits=18, decimal_places=3, null=True, blank=True)
+    barcode = models.CharField(max_length=200, null=True, blank=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddownstock'
+        managed = False
+        indexes = [
+            models.Index(fields=['product', 'client_id']),
+        ]
+
 class AccPriceCode(models.Model):
     code = models.CharField(max_length=2, primary_key=True)
     name = models.CharField(max_length=30)

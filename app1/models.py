@@ -185,6 +185,21 @@ class AccProductBatch(models.Model):
         managed = False
 
 
+class AccProductPhoto(models.Model):
+    code = models.ForeignKey(
+        AccProduct,
+        on_delete=models.DO_NOTHING,
+        db_column='code',
+        related_name='photos'
+    )
+    url = models.CharField(max_length=500, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productphoto'
+        managed = False
+
+
 
 class AccPriceCode(models.Model):
     code = models.CharField(max_length=2, primary_key=True)
@@ -200,15 +215,17 @@ class AccPriceCode(models.Model):
         return self.name
 
 
+
 class AccProductPhoto(models.Model):
+    """Product photos table"""
     id = models.AutoField(primary_key=True)
-    code = models.CharField(max_length=30)
-    url = models.CharField(max_length=300)
+    code = models.CharField(max_length=30, blank=True, null=True)
+    url = models.CharField(max_length=300, blank=True, null=True)
     client_id = models.CharField(max_length=100)
 
     class Meta:
         db_table = 'acc_productphoto'
-        managed = False   
+        managed = True
         indexes = [
             models.Index(fields=['code', 'client_id']),
         ]
@@ -226,7 +243,7 @@ class AccSalesTypes(models.Model):
 
     class Meta:
         db_table = 'acc_sales_types'
-        managed = False
+        managed = True
 
 
 
@@ -237,8 +254,7 @@ class AccGoddown(models.Model):
 
     class Meta:
         db_table = 'acc_goddown'
-        managed = False
-
+        managed = True
 
 
 
@@ -252,7 +268,7 @@ class AccGoddownStock(models.Model):
 
     class Meta:
         db_table = 'acc_goddownstock'
-        managed = False
+        managed = True
 
 
 class AccDepartments(models.Model):
@@ -284,7 +300,7 @@ class Collection(models.Model):
 
     class Meta:
         db_table = 'collection'
-        managed = False
+        managed = True
         indexes = [
             models.Index(fields=['client_id']),
         ]

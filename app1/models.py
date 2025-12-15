@@ -185,21 +185,6 @@ class AccProductBatch(models.Model):
         managed = False
 
 
-class AccProductPhoto(models.Model):
-    code = models.ForeignKey(
-        AccProduct,
-        on_delete=models.DO_NOTHING,
-        db_column='code',
-        related_name='photos'
-    )
-    url = models.CharField(max_length=500, blank=True, null=True)
-    client_id = models.CharField(max_length=100)
-
-    class Meta:
-        db_table = 'acc_productphoto'
-        managed = False
-
-
 
 class AccPriceCode(models.Model):
     code = models.CharField(max_length=2, primary_key=True)

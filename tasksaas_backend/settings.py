@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'accesscontroll',
     'users_api',
     'area',
+    'Collection',
 ]
 
 # Parse CORS origins from environment variable

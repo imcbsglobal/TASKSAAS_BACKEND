@@ -64,6 +64,11 @@ class AccMaster(models.Model):
     phone2 = models.CharField(max_length=60, blank=True, null=True)#
     openingdepartment = models.CharField(max_length=100, blank=True, null=True)
     area = models.CharField(max_length=200, blank=True, null=True)
+    address = models.CharField(max_length=200, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=60, blank=True, null=True)
+    gstin = models.CharField(max_length=30, blank=True, null=True)
+    remarkcolumntitle = models.CharField(max_length=50, blank=True, null=True)
     client_id = models.CharField(max_length=100)
 
     class Meta:
@@ -209,4 +214,97 @@ class AccPriceCode(models.Model):
     def __str__(self):
         return self.name
 
+
+
+class AccProductPhoto(models.Model):
+    """Product photos table"""
+    id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=30, blank=True, null=True)
+    url = models.CharField(max_length=300, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productphoto'
+        managed = True
+        indexes = [
+            models.Index(fields=['code', 'client_id']),
+        ]
+
+
+
+
+
+class AccSalesTypes(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=150, blank=True, null=True)
+    goddown = models.CharField(max_length=50, blank=True, null=True)
+    user = models.CharField(max_length=50, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_sales_types'
+        managed = True
+
+
+
+class AccGoddown(models.Model):
+    goddownid = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=200)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddown'
+        managed = True
+
+
+
+class AccGoddownStock(models.Model):
+    id = models.AutoField(primary_key=True)
+    goddownid = models.CharField(max_length=50)
+    product = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=18, decimal_places=3, null=True, blank=True)
+    barcode = models.CharField(max_length=200, null=True, blank=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddownstock'
+        managed = True
+
+
+class AccDepartments(models.Model):
+    department_id = models.CharField(max_length=30)
+    department = models.CharField(max_length=30)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "acc_departments"   # <-- IMPORTANT: link Django to real table name
+
+    def __str__(self):
+        return self.department
+
+
+
+
+# app1/models.py
+
+from django.db import models
+
+class Collection(models.Model):
+    code = models.CharField(max_length=50)
+    name = models.CharField(max_length=200)
+    place = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    type = models.CharField(max_length=50)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'collection'
+        managed = True
+        indexes = [
+            models.Index(fields=['client_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
 

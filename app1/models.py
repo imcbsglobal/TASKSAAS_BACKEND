@@ -208,7 +208,7 @@ class AccProductPhoto(models.Model):
 
     class Meta:
         db_table = 'acc_productphoto'
-        managed = False   ✅
+        managed = False   
         indexes = [
             models.Index(fields=['code', 'client_id']),
         ]

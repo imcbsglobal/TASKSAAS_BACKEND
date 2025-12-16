@@ -28,6 +28,9 @@ urlpatterns = [
     path('api/suppiers_api/', include('suppiers_api.urls')),
     path('api/users_api/', include('users_api.urls')),
     path('api/area/', include('area.urls')),
+    path('api/product/', include('product_details_api.urls')),
+    path('api/collection/', include('Collection.urls')),
+
 
     
 ]

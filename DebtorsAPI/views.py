@@ -40,6 +40,7 @@ def get_debtors_list(request):
                 'phone': d['phone2'],
                 'super_code': d['super_code'],
                 'balance': balance,
+                'client_id': client_id,  # ⬅️ Added this line
             })
 
         return Response({'success': True, 'data': result})

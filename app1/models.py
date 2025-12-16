@@ -64,6 +64,11 @@ class AccMaster(models.Model):
     phone2 = models.CharField(max_length=60, blank=True, null=True)#
     openingdepartment = models.CharField(max_length=100, blank=True, null=True)
     area = models.CharField(max_length=200, blank=True, null=True)
+    address = models.CharField(max_length=200, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=60, blank=True, null=True)
+    gstin = models.CharField(max_length=30, blank=True, null=True)
+    remarkcolumntitle = models.CharField(max_length=50, blank=True, null=True)
     client_id = models.CharField(max_length=100)
 
     class Meta:
@@ -133,3 +138,214 @@ class CashAndBankAccMaster(models.Model):
         db_table = 'cashandbankaccmaster'
         managed = False  # Since the table already exists
         unique_together = ('code', 'client_id')
+
+
+
+class AccProduct(models.Model):
+    code = models.CharField(max_length=30, primary_key=True)
+    name = models.CharField(max_length=200, blank=True, null=True)
+    taxcode = models.CharField(max_length=10, blank=True, null=True)
+    product = models.CharField(max_length=100, blank=True, null=True)
+    brand = models.CharField(max_length=100, blank=True, null=True)
+    unit = models.CharField(max_length=20, blank=True, null=True)
+    defected = models.CharField(max_length=5, blank=True, null=True)
+    text6 = models.CharField(max_length=200, blank=True, null=True)
+    settings = models.CharField(max_length=200, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_product'
+        managed = False
+
+
+class AccProductBatch(models.Model):
+    productcode = models.ForeignKey(
+        AccProduct,
+        on_delete=models.DO_NOTHING,
+        db_column='productcode',
+        related_name='batches'
+    )
+    salesprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    secondprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    thirdprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    fourthprice = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    nlc1 = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True)
+    bmrp = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    expirydate = models.DateField(null=True, blank=True)
+    modified = models.DateField(null=True, blank=True)
+    modifiedtime = models.TimeField(null=True, blank=True)
+    settings = models.CharField(max_length=200, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productbatch'
+        managed = False
+
+
+class AccProductPhoto(models.Model):
+    code = models.ForeignKey(
+        AccProduct,
+        on_delete=models.DO_NOTHING,
+        db_column='code',
+        related_name='photos'
+    )
+    url = models.CharField(max_length=500, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productphoto'
+        managed = False
+
+
+
+
+# =====================================================
+# ✅ GODDOWN MODELS (THIS IS WHAT YOU ASKED)
+# =====================================================
+
+# -------------------------------
+# GODDOWN MASTER
+# -------------------------------
+class AccGoddown(models.Model):
+    goddownid = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=200)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddown'
+        managed = False
+
+    def __str__(self):
+        return self.name
+
+
+# -------------------------------
+# GODDOWN STOCK
+# -------------------------------
+class AccGoddownStock(models.Model):
+    id = models.AutoField(primary_key=True)
+    goddownid = models.CharField(max_length=50)
+    product = models.CharField(max_length=200)   # matches acc_product.code
+    quantity = models.DecimalField(max_digits=18, decimal_places=3, null=True, blank=True)
+    barcode = models.CharField(max_length=200, null=True, blank=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddownstock'
+        managed = False
+        indexes = [
+            models.Index(fields=['product', 'client_id']),
+        ]
+
+class AccPriceCode(models.Model):
+    code = models.CharField(max_length=2, primary_key=True)
+    name = models.CharField(max_length=30)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_pricecode'
+        managed = False
+        unique_together = ('code', 'client_id')
+
+    def __str__(self):
+        return self.name
+
+
+
+class AccProductPhoto(models.Model):
+    """Product photos table"""
+    id = models.AutoField(primary_key=True)
+    code = models.CharField(max_length=30, blank=True, null=True)
+    url = models.CharField(max_length=300, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_productphoto'
+        managed = True
+        indexes = [
+            models.Index(fields=['code', 'client_id']),
+        ]
+
+
+
+
+
+class AccSalesTypes(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=150, blank=True, null=True)
+    goddown = models.CharField(max_length=50, blank=True, null=True)
+    user = models.CharField(max_length=50, blank=True, null=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_sales_types'
+        managed = True
+
+
+
+class AccGoddown(models.Model):
+    goddownid = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=200)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddown'
+        managed = True
+
+
+
+class AccGoddownStock(models.Model):
+    id = models.AutoField(primary_key=True)
+    goddownid = models.CharField(max_length=50)
+    product = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=18, decimal_places=3, null=True, blank=True)
+    barcode = models.CharField(max_length=200, null=True, blank=True)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = 'acc_goddownstock'
+        managed = True
+
+
+class AccDepartments(models.Model):
+    department_id = models.CharField(max_length=30)
+    department = models.CharField(max_length=30)
+    client_id = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "acc_departments"   # <-- IMPORTANT: link Django to real table name
+
+    def __str__(self):
+        return self.department
+
+
+
+
+# app1/models.py
+
+from django.db import models
+
+class Collection(models.Model):
+    code = models.CharField(max_length=50)
+    name = models.CharField(max_length=200)
+    place = models.CharField(max_length=100, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    type = models.CharField(max_length=50)
+    client_id = models.CharField(max_length=100)
+    created_date = models.DateField(auto_now_add=True)
+    created_time = models.TimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'collection'
+        managed = True
+        indexes = [
+            models.Index(fields=['client_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+

@@ -323,11 +323,15 @@ class AccDepartments(models.Model):
 
 
 
-
-# app1/models.py
 from django.db import models
 
 class Collection(models.Model):
+
+    STATUS_CHOICES = [
+        ('uploaded to server', 'Uploaded to Server'),
+        ('completed', 'Completed'),
+    ]
+
     code = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
     place = models.CharField(max_length=100, blank=True, null=True)
@@ -336,13 +340,14 @@ class Collection(models.Model):
     type = models.CharField(max_length=50)
     client_id = models.CharField(max_length=100)
 
-    # ✅ Auto date & time when uploaded to server
+    # Auto date & time
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
 
-    # ✅ Status field
+    # ✅ Status (ONLY 2 values allowed)
     status = models.CharField(
         max_length=30,
+        choices=STATUS_CHOICES,
         default='uploaded to server'
     )
 

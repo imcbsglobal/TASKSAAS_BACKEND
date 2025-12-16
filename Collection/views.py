@@ -71,8 +71,17 @@ def list_collections(request):
         return error
 
     qs = Collection.objects.filter(client_id=client_id).values(
-        'id', 'code', 'name', 'place', 'phone', 'amount', 'type'
+        'id',
+        'code',
+        'name',
+        'place',
+        'phone',
+        'amount',
+        'type',
+        'created_date',
+        'created_time'
     )
+
 
     return Response({
         'success': True,

@@ -53,7 +53,8 @@ def create_collection(request):
         phone=data.get('phone'),
         amount=data.get('amount'),
         type=data.get('type'),
-        client_id=client_id
+        client_id=client_id,
+        status='uploaded to server'
     )
 
     return Response({
@@ -70,7 +71,10 @@ def list_collections(request):
     if error:
         return error
 
-    qs = Collection.objects.filter(client_id=client_id).values(
+    qs = Collection.objects.filter(
+        client_id=client_id,
+        status='uploaded to server'
+    ).values(
         'id',
         'code',
         'name',
@@ -79,11 +83,75 @@ def list_collections(request):
         'amount',
         'type',
         'created_date',
-        'created_time'
+        'created_time',
+        'status'
     )
+
 
 
     return Response({
         'success': True,
         'data': list(qs)
+    })
+
+
+
+@api_view(['POST'])
+def complete_collection(request):
+    token_client_id, error = get_client_id_from_token(request)
+    if error:
+        return error
+
+    data = request.data
+
+    collection_id = data.get('id')
+    status_value = data.get('status')
+    body_client_id = data.get('client_id')
+
+    # ✅ Validation
+    if not collection_id:
+        return Response(
+            {'success': False, 'error': 'id is required'},
+            status=400
+        )
+
+    if not status_value:
+        return Response(
+            {'success': False, 'error': 'status is required'},
+            status=400
+        )
+
+    if not body_client_id:
+        return Response(
+            {'success': False, 'error': 'client_id is required'},
+            status=400
+        )
+
+    # ✅ Token vs body client_id check
+    if token_client_id != body_client_id:
+        return Response(
+            {'success': False, 'error': 'client_id mismatch'},
+            status=403
+        )
+
+    try:
+        collection = Collection.objects.get(
+            id=collection_id,
+            client_id=token_client_id
+        )
+    except Collection.DoesNotExist:
+        return Response(
+            {'success': False, 'error': 'Collection not found'},
+            status=404
+        )
+
+    # ✅ Update status dynamically
+    collection.status = status_value
+    collection.save()
+
+    return Response({
+        'success': True,
+        'message': 'Collection status updated successfully',
+        'id': collection.id,
+        'status': collection.status
     })

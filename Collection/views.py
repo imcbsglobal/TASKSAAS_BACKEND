@@ -9,6 +9,27 @@ import jwt
 from app1.models import Collection
 
 
+
+import jwt
+from django.conf import settings
+
+
+def get_user_from_token(request):
+    auth_header = request.META.get('HTTP_AUTHORIZATION')
+
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return None, None
+
+    token = auth_header.split(' ')[1]
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        return payload.get('client_id'), payload.get('username')
+    except jwt.ExpiredSignatureError:
+        return None, None
+    except jwt.InvalidTokenError:
+        return None, None
+
 def get_client_id_from_token(request):
     auth_header = request.META.get('HTTP_AUTHORIZATION')
 
@@ -32,12 +53,19 @@ def get_client_id_from_token(request):
 # ---------------- POST API ----------------
 @api_view(['POST'])
 def create_collection(request):
-    client_id, error = get_client_id_from_token(request)
-    if error:
-        return error
+
+    # ✅ Get client_id AND username from token
+    client_id, username = get_user_from_token(request)
+
+    if not client_id:
+        return Response(
+            {'success': False, 'error': 'Invalid or missing authorization token'},
+            status=401
+        )
 
     data = request.data
 
+    # ✅ Required field validation
     required_fields = ['code', 'name', 'amount', 'type']
     for field in required_fields:
         if not data.get(field):
@@ -46,6 +74,7 @@ def create_collection(request):
                 status=400
             )
 
+    # ✅ Create collection with auto username
     collection = Collection.objects.create(
         code=data.get('code'),
         name=data.get('name'),
@@ -54,6 +83,7 @@ def create_collection(request):
         amount=data.get('amount'),
         type=data.get('type'),
         client_id=client_id,
+        created_by=username,              # ✅ AUTO from JWT
         status='uploaded to server'
     )
 
@@ -62,6 +92,7 @@ def create_collection(request):
         'message': 'Collection created successfully',
         'id': collection.id
     }, status=201)
+
 
 
 # ---------------- GET API ----------------

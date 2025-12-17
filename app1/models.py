@@ -339,6 +339,7 @@ class Collection(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     type = models.CharField(max_length=50)
     client_id = models.CharField(max_length=100)
+    created_by = models.CharField(max_length=100, blank=True, null=True)  # ✅ NEW
 
     # Auto date & time
     created_date = models.DateField(auto_now_add=True)

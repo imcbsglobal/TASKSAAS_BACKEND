@@ -60,7 +60,8 @@ def login(request):
     "area-table",
     "master-suppliers",
     "bills-receivable",
-    "reports"
+    "reports",
+    "collection-report",
     ]
     else :    
         try:

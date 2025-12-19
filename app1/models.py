@@ -323,12 +323,15 @@ class AccDepartments(models.Model):
 
 
 
-
-# app1/models.py
-
 from django.db import models
 
 class Collection(models.Model):
+
+    STATUS_CHOICES = [
+        ('uploaded to server', 'Uploaded to Server'),
+        ('completed', 'Completed'),
+    ]
+
     code = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
     place = models.CharField(max_length=100, blank=True, null=True)
@@ -336,8 +339,18 @@ class Collection(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     type = models.CharField(max_length=50)
     client_id = models.CharField(max_length=100)
+    created_by = models.CharField(max_length=100, blank=True, null=True)  # ✅ NEW
+
+    # Auto date & time
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
+
+    # ✅ Status (ONLY 2 values allowed)
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='uploaded to server'
+    )
 
     class Meta:
         db_table = 'collection'
@@ -348,4 +361,3 @@ class Collection(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
-

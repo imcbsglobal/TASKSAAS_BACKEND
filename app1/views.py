@@ -62,6 +62,7 @@ def login(request):
     "bills-receivable",
     "reports",
     "collection-report",
+    "reports"
     ]
     else :    
         try:

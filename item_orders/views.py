@@ -3,11 +3,58 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .models import ItemOrders
+import jwt
+from django.conf import settings
+from rest_framework.response import Response
+
+def get_client_from_token(request):
+    auth_header = request.META.get('HTTP_AUTHORIZATION')
+
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return None, Response(
+            {'success': False, 'error': 'Missing or invalid authorization header'},
+            status=401
+        )
+
+    token = auth_header.split(' ')[1]
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        client_id = payload.get('client_id')
+
+        if not client_id:
+            return None, Response(
+                {'success': False, 'error': 'Invalid token: client_id missing'},
+                status=401
+            )
+
+        return payload, None
+
+    except jwt.ExpiredSignatureError:
+        return None, Response(
+            {'success': False, 'error': 'Token expired'},
+            status=401
+        )
+    except jwt.InvalidTokenError as e:
+        return None, Response(
+            {'success': False, 'error': f'Invalid token: {str(e)}'},
+            status=401
+        )
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
+import json
+from .models import ItemOrders
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_item_order(request):
+    payload, error = get_client_from_token(request)
+    if error:
+        return error
+
     try:
         data = json.loads(request.body)
 
@@ -35,6 +82,10 @@ def create_item_order(request):
 
 @require_http_methods(["GET"])
 def item_orders_list(request):
+    payload, error = get_client_from_token(request)
+    if error:
+        return error
+
     orders = ItemOrders.objects.all()
 
     data = []
@@ -47,8 +98,8 @@ def item_orders_list(request):
             "payment_type": o.payment_type,
             "amount": float(o.amount),
             "quantity": o.quantity,
-            "date": o.created_date,
-            "time": o.created_time,
+            "date": o.created_date.strftime('%Y-%m-%d'),
+            "time": o.created_time.strftime('%H:%M:%S'),
         })
 
     return JsonResponse({

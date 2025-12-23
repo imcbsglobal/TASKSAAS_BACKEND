@@ -361,3 +361,25 @@ class Collection(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+    
+
+
+
+class ItemOrders(models.Model):
+    customer_name = models.CharField(max_length=200)
+    area = models.CharField(max_length=200)
+    product_name = models.CharField(max_length=200)
+    payment_type = models.CharField(max_length=50)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField()
+
+    # auto date & time
+    created_date = models.DateField(auto_now_add=True)
+    created_time = models.TimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "item_orders"
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.customer_name} - {self.product_name}"

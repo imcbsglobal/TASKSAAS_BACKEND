@@ -366,13 +366,19 @@ from django.db import models
 
 class ItemOrders(models.Model):
     customer_name = models.CharField(max_length=200)
+    customer_code = models.CharField(max_length=100)     # ✅ NEW
     area = models.CharField(max_length=200)
+
     product_name = models.CharField(max_length=200)
-    payment_type = models.CharField(max_length=50)   # Cash / Cheque
+    item_code = models.CharField(max_length=100)         # ✅ NEW
+    barcode = models.CharField(max_length=100)           # ✅ NEW
+
+    payment_type = models.CharField(max_length=50)       # Cash / Card / UPI
+    price = models.DecimalField(max_digits=10, decimal_places=2)  # ✅ NEW
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField()
 
-    # EXTRA FIELDS
+    client_id = models.CharField(max_length=100)         # ✅ NEW
     username = models.CharField(max_length=100)
     remark = models.TextField(blank=True, null=True)
 

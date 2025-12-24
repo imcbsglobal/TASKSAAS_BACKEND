@@ -24,14 +24,6 @@ def get_client_from_token(request):
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        client_id = payload.get('client_id')
-
-        if not client_id:
-            return None, Response(
-                {'success': False, 'error': 'Invalid token: client_id missing'},
-                status=401
-            )
-
         return payload, None
 
     except jwt.ExpiredSignatureError:
@@ -55,11 +47,19 @@ def create_item_order(request):
 
         order = ItemOrders.objects.create(
             customer_name=data.get("customer_name"),
+            customer_code=data.get("customer_code"),
             area=data.get("area"),
+
             product_name=data.get("product_name"),
+            item_code=data.get("item_code"),
+            barcode=data.get("barcode"),
+
             payment_type=data.get("payment_type"),
+            price=data.get("price"),
             amount=data.get("amount"),
             quantity=data.get("quantity"),
+
+            client_id=data.get("client_id"),
             username=data.get("username"),
             remark=data.get("remark"),
         )
@@ -86,18 +86,31 @@ def item_orders_list(request):
     if error:
         return error
 
+    client_id = request.GET.get("client_id")
+
     orders = ItemOrders.objects.all()
+    if client_id:
+        orders = orders.filter(client_id=client_id)
 
     data = []
     for o in orders:
         data.append({
             "id": o.id,
+            "client_id": o.client_id,
+
             "customer_name": o.customer_name,
+            "customer_code": o.customer_code,
             "area": o.area,
+
             "product_name": o.product_name,
+            "item_code": o.item_code,
+            "barcode": o.barcode,
+
             "payment_type": o.payment_type,
+            "price": float(o.price),
             "amount": float(o.amount),
             "quantity": o.quantity,
+
             "username": o.username,
             "remark": o.remark,
             "date": o.created_date.strftime('%Y-%m-%d'),

@@ -363,15 +363,20 @@ class Collection(models.Model):
         return f"{self.code} - {self.name}"
     
 
-
+from django.db import models
 
 class ItemOrders(models.Model):
     customer_name = models.CharField(max_length=200)
     area = models.CharField(max_length=200)
     product_name = models.CharField(max_length=200)
-    payment_type = models.CharField(max_length=50)
+    payment_type = models.CharField(max_length=50)   # Cash / Cheque
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField()
+
+    # ✅ EXTRA FIELDS
+    username = models.CharField(max_length=100)
+    cheque_number = models.CharField(max_length=100, blank=True, null=True)
+    remark = models.TextField(blank=True, null=True)
 
     # auto date & time
     created_date = models.DateField(auto_now_add=True)

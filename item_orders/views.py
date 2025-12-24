@@ -1,12 +1,16 @@
 import json
+import jwt
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from .models import ItemOrders
-import jwt
-from django.conf import settings
 from rest_framework.response import Response
+from .models import ItemOrders
 
+
+# --------------------------------------------------
+# TOKEN VALIDATION
+# --------------------------------------------------
 def get_client_from_token(request):
     auth_header = request.META.get('HTTP_AUTHORIZATION')
 
@@ -31,23 +35,14 @@ def get_client_from_token(request):
         return payload, None
 
     except jwt.ExpiredSignatureError:
-        return None, Response(
-            {'success': False, 'error': 'Token expired'},
-            status=401
-        )
+        return None, Response({'success': False, 'error': 'Token expired'}, status=401)
     except jwt.InvalidTokenError as e:
-        return None, Response(
-            {'success': False, 'error': f'Invalid token: {str(e)}'},
-            status=401
-        )
-
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-import json
-from .models import ItemOrders
+        return None, Response({'success': False, 'error': str(e)}, status=401)
 
 
+# --------------------------------------------------
+# CREATE ITEM ORDER (POST)
+# --------------------------------------------------
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_item_order(request):
@@ -58,6 +53,13 @@ def create_item_order(request):
     try:
         data = json.loads(request.body)
 
+        # ✅ cheque validation
+        if data.get("payment_type", "").lower() == "cheque" and not data.get("cheque_number"):
+            return JsonResponse({
+                "success": False,
+                "error": "cheque_number is required for cheque payments"
+            }, status=400)
+
         order = ItemOrders.objects.create(
             customer_name=data.get("customer_name"),
             area=data.get("area"),
@@ -65,6 +67,9 @@ def create_item_order(request):
             payment_type=data.get("payment_type"),
             amount=data.get("amount"),
             quantity=data.get("quantity"),
+            username=data.get("username"),
+            cheque_number=data.get("cheque_number"),
+            remark=data.get("remark"),
         )
 
         return JsonResponse({
@@ -80,6 +85,9 @@ def create_item_order(request):
         }, status=400)
 
 
+# --------------------------------------------------
+# LIST ITEM ORDERS (GET)
+# --------------------------------------------------
 @require_http_methods(["GET"])
 def item_orders_list(request):
     payload, error = get_client_from_token(request)
@@ -98,6 +106,9 @@ def item_orders_list(request):
             "payment_type": o.payment_type,
             "amount": float(o.amount),
             "quantity": o.quantity,
+            "username": o.username,
+            "cheque_number": o.cheque_number,
+            "remark": o.remark,
             "date": o.created_date.strftime('%Y-%m-%d'),
             "time": o.created_time.strftime('%H:%M:%S'),
         })

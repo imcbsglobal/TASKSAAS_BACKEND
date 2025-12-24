@@ -56,7 +56,7 @@ def create_item_order(request):
 
             payment_type=data.get("payment_type"),
             price=data.get("price"),
-            amount=data.get("amount"),
+            amount=data.get("amount"),   # ✅ kept for DB
             quantity=data.get("quantity"),
 
             client_id=data.get("client_id"),
@@ -77,6 +77,9 @@ def create_item_order(request):
         }, status=400)
 
 
+# --------------------------------------------------
+# LIST ITEM ORDERS (GET)
+# --------------------------------------------------
 @require_http_methods(["GET"])
 def item_orders_list(request):
     payload, error = get_client_from_token(request)
@@ -104,10 +107,7 @@ def item_orders_list(request):
             "barcode": o.barcode,
 
             "payment_type": o.payment_type,
-
-            # ✅ SAFE CONVERSION (THIS FIXES 500 ERROR)
             "price": float(o.price) if o.price is not None else 0,
-            "amount": float(o.amount) if o.amount is not None else 0,
             "quantity": o.quantity,
 
             "username": o.username,

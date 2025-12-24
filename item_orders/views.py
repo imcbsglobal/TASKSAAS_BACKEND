@@ -77,9 +77,6 @@ def create_item_order(request):
         }, status=400)
 
 
-# --------------------------------------------------
-# LIST ITEM ORDERS (GET)
-# --------------------------------------------------
 @require_http_methods(["GET"])
 def item_orders_list(request):
     payload, error = get_client_from_token(request)
@@ -107,14 +104,17 @@ def item_orders_list(request):
             "barcode": o.barcode,
 
             "payment_type": o.payment_type,
-            "price": float(o.price),
-            "amount": float(o.amount),
+
+            # ✅ SAFE CONVERSION (THIS FIXES 500 ERROR)
+            "price": float(o.price) if o.price is not None else 0,
+            "amount": float(o.amount) if o.amount is not None else 0,
             "quantity": o.quantity,
 
             "username": o.username,
             "remark": o.remark,
-            "date": o.created_date.strftime('%Y-%m-%d'),
-            "time": o.created_time.strftime('%H:%M:%S'),
+
+            "date": o.created_date.strftime('%Y-%m-%d') if o.created_date else None,
+            "time": o.created_time.strftime('%H:%M:%S') if o.created_time else None,
         })
 
     return JsonResponse({

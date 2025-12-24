@@ -53,13 +53,6 @@ def create_item_order(request):
     try:
         data = json.loads(request.body)
 
-        # ✅ cheque validation
-        if data.get("payment_type", "").lower() == "cheque" and not data.get("cheque_number"):
-            return JsonResponse({
-                "success": False,
-                "error": "cheque_number is required for cheque payments"
-            }, status=400)
-
         order = ItemOrders.objects.create(
             customer_name=data.get("customer_name"),
             area=data.get("area"),
@@ -68,7 +61,6 @@ def create_item_order(request):
             amount=data.get("amount"),
             quantity=data.get("quantity"),
             username=data.get("username"),
-            cheque_number=data.get("cheque_number"),
             remark=data.get("remark"),
         )
 
@@ -107,7 +99,6 @@ def item_orders_list(request):
             "amount": float(o.amount),
             "quantity": o.quantity,
             "username": o.username,
-            "cheque_number": o.cheque_number,
             "remark": o.remark,
             "date": o.created_date.strftime('%Y-%m-%d'),
             "time": o.created_time.strftime('%H:%M:%S'),

@@ -362,7 +362,6 @@ class Collection(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
     
-
 from django.db import models
 
 class ItemOrders(models.Model):
@@ -373,9 +372,8 @@ class ItemOrders(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField()
 
-    # ✅ EXTRA FIELDS
+    # EXTRA FIELDS
     username = models.CharField(max_length=100)
-    cheque_number = models.CharField(max_length=100, blank=True, null=True)
     remark = models.TextField(blank=True, null=True)
 
     # auto date & time

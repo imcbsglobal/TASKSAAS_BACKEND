@@ -142,7 +142,6 @@ def item_orders_list(request):
     })
 
 from django.utils import timezone
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def change_order_status(request):
@@ -152,28 +151,43 @@ def change_order_status(request):
 
     try:
         data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({
+            "success": False,
+            "error": "Invalid JSON"
+        }, status=400)
 
-        order_id = data.get("order_id")
-        status_value = data.get("status")
+    order_id = data.get("order_id")
+    status_value = data.get("status")
 
-        if not order_id or not status_value:
-            return JsonResponse({
-                "success": False,
-                "error": "order_id and status are required"
-            }, status=400)
+    # ✅ ALLOWED STATUS LIST (SAME AS COLLECTION)
+    ALLOWED_STATUSES = ['uploaded to server', 'completed']
 
+    if not order_id or not status_value:
+        return JsonResponse({
+            "success": False,
+            "error": "order_id and status are required"
+        }, status=400)
+
+    if status_value not in ALLOWED_STATUSES:
+        return JsonResponse({
+            "success": False,
+            "error": f"Invalid status. Allowed values: {ALLOWED_STATUSES}"
+        }, status=400)
+
+    try:
         order = ItemOrders.objects.get(
             order_id=order_id,
             client_id=payload.get("client_id")
         )
 
-        # ✅ update status
+        from django.utils import timezone
         now = timezone.localtime()
+
         order.status = status_value
         order.status_changed_date = now.date()
         order.status_changed_time = now.time()
         order.status_changed_by = payload.get("username")
-
         order.save()
 
         return JsonResponse({
@@ -188,9 +202,3 @@ def change_order_status(request):
             "success": False,
             "error": "Order not found"
         }, status=404)
-
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e)
-        }, status=400)

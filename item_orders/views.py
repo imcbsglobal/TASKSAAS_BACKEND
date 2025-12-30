@@ -52,7 +52,6 @@ def create_item_order(request):
     try:
         data = json.loads(request.body)
 
-        # ✅ REQUIRED FIELD CHECK
         if not data.get("device_id"):
             return JsonResponse({
                 "success": False,
@@ -73,11 +72,11 @@ def create_item_order(request):
             quantity=data.get("quantity"),
             amount=data.get("amount"),
 
-            client_id=data.get("client_id"),
+            client_id=payload.get("client_id"),  # ✅ FIXED
             username=data.get("username"),
             remark=data.get("remark"),
 
-            device_id=data.get("device_id")  # ✅ REQUIRED
+            device_id=data.get("device_id")
         )
 
         return JsonResponse({
@@ -91,6 +90,7 @@ def create_item_order(request):
             "success": False,
             "error": str(e)
         }, status=400)
+
 
 
 

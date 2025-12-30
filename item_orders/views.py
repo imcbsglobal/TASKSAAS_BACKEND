@@ -15,7 +15,7 @@ def get_client_from_token(request):
     auth_header = request.META.get('HTTP_AUTHORIZATION')
 
     if not auth_header or not auth_header.startswith('Bearer '):
-        return None, Response(
+        return None, JsonResponse(
             {'success': False, 'error': 'Missing or invalid authorization header'},
             status=401
         )
@@ -27,9 +27,16 @@ def get_client_from_token(request):
         return payload, None
 
     except jwt.ExpiredSignatureError:
-        return None, Response({'success': False, 'error': 'Token expired'}, status=401)
+        return None, JsonResponse(
+            {'success': False, 'error': 'Token expired'},
+            status=401
+        )
     except jwt.InvalidTokenError as e:
-        return None, Response({'success': False, 'error': str(e)}, status=401)
+        return None, JsonResponse(
+            {'success': False, 'error': str(e)},
+            status=401
+        )
+
 
 
 # --------------------------------------------------

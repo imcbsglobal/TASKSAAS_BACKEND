@@ -8,7 +8,7 @@ import jwt
 
 from app1.models import Collection
 
-
+from django.utils import timezone
 
 import jwt
 from django.conf import settings
@@ -127,7 +127,7 @@ def complete_collection(request):
 
     # ✅ When status changes → auto fill uploaded details
     if status_value == 'completed' and collection.status != 'completed':
-        now = timezone.now()
+        now = timezone.localtime()   # ✅ FIX
         collection.uploaded_date = now.date()
         collection.uploaded_time = now.time()
         collection.uploaded_username = username

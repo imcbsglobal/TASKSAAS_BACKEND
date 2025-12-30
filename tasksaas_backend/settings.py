@@ -56,6 +56,9 @@ if DEBUG:
 else:
     CORS_ALLOW_ALL_ORIGINS = False
 
+
+TIME_ZONE = 'Asia/Kolkata'
+USE_TZ = True
 # Application definition
 
 INSTALLED_APPS = [

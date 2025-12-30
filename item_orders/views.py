@@ -140,3 +140,57 @@ def item_orders_list(request):
         "total": len(data),
         "orders": data
     })
+
+from django.utils import timezone
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def change_order_status(request):
+    payload, error = get_client_from_token(request)
+    if error:
+        return error
+
+    try:
+        data = json.loads(request.body)
+
+        order_id = data.get("order_id")
+        status_value = data.get("status")
+
+        if not order_id or not status_value:
+            return JsonResponse({
+                "success": False,
+                "error": "order_id and status are required"
+            }, status=400)
+
+        order = ItemOrders.objects.get(
+            order_id=order_id,
+            client_id=payload.get("client_id")
+        )
+
+        # ✅ update status
+        now = timezone.localtime()
+        order.status = status_value
+        order.status_changed_date = now.date()
+        order.status_changed_time = now.time()
+        order.status_changed_by = payload.get("username")
+
+        order.save()
+
+        return JsonResponse({
+            "success": True,
+            "message": "Order status updated",
+            "order_id": order.order_id,
+            "status": order.status
+        })
+
+    except ItemOrders.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Order not found"
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=400)

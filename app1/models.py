@@ -370,15 +370,15 @@ class Collection(models.Model):
 
 from django.db import models
 import uuid
-
 class ItemOrders(models.Model):
 
-    # ✅ UNIQUE ORDER ID (AUTO)
-    order_id = models.CharField(
-        max_length=50,
-        unique=True,
-        editable=False
-    )
+    STATUS_CHOICES = [
+        ('created', 'Created'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled')
+    ]
+
+    order_id = models.CharField(max_length=50, unique=True, editable=False)
 
     customer_name = models.CharField(max_length=200)
     customer_code = models.CharField(max_length=100)
@@ -397,20 +397,23 @@ class ItemOrders(models.Model):
     username = models.CharField(max_length=100)
     remark = models.TextField(blank=True, null=True)
 
-    # ✅ NEW
     device_id = models.CharField(max_length=100)
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='created'
+    )
+
+    status_changed_date = models.DateField(blank=True, null=True)
+    status_changed_time = models.TimeField(blank=True, null=True)
+    status_changed_by = models.CharField(max_length=100, blank=True, null=True)
 
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
 
-    class Meta:
-        db_table = "item_orders"
-        ordering = ['-id']
-
     def save(self, *args, **kwargs):
         if not self.order_id:
+            import uuid
             self.order_id = f"ORD-{uuid.uuid4().hex[:10].upper()}"
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.order_id} - {self.customer_name}"

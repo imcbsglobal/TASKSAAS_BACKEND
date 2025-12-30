@@ -368,28 +368,38 @@ class Collection(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
 
-    
 from django.db import models
+import uuid
 
 class ItemOrders(models.Model):
+
+    # ✅ UNIQUE ORDER ID (AUTO)
+    order_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False
+    )
+
     customer_name = models.CharField(max_length=200)
-    customer_code = models.CharField(max_length=100)     # ✅ NEW
+    customer_code = models.CharField(max_length=100)
     area = models.CharField(max_length=200)
 
     product_name = models.CharField(max_length=200)
-    item_code = models.CharField(max_length=100)         # ✅ NEW
-    barcode = models.CharField(max_length=100)           # ✅ NEW
+    item_code = models.CharField(max_length=100)
+    barcode = models.CharField(max_length=100)
 
-    payment_type = models.CharField(max_length=50)       # Cash / Card / UPI
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # ✅ NEW
+    payment_type = models.CharField(max_length=50)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField()
 
-    client_id = models.CharField(max_length=100)         # ✅ NEW
+    client_id = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
     remark = models.TextField(blank=True, null=True)
 
-    # auto date & time
+    # ✅ NEW
+    device_id = models.CharField(max_length=100, blank=True, null=True)
+
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
 
@@ -397,5 +407,10 @@ class ItemOrders(models.Model):
         db_table = "item_orders"
         ordering = ['-id']
 
+    def save(self, *args, **kwargs):
+        if not self.order_id:
+            self.order_id = f"ORD-{uuid.uuid4().hex[:10].upper()}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.customer_name} - {self.product_name}"
+        return f"{self.order_id} - {self.customer_name}"

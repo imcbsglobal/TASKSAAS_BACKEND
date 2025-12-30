@@ -56,18 +56,20 @@ def create_item_order(request):
 
             payment_type=data.get("payment_type"),
             price=data.get("price"),
-            amount=data.get("amount"),   # ✅ kept for DB
             quantity=data.get("quantity"),
+            amount=data.get("amount"),
 
             client_id=data.get("client_id"),
             username=data.get("username"),
             remark=data.get("remark"),
+
+            device_id=data.get("device_id")  # ✅ NEW
         )
 
         return JsonResponse({
             "success": True,
             "message": "Order created successfully",
-            "order_id": order.id
+            "order_id": order.order_id   # ✅ SHOW UNIQUE ORDER ID
         })
 
     except Exception as e:
@@ -75,6 +77,7 @@ def create_item_order(request):
             "success": False,
             "error": str(e)
         }, status=400)
+
 
 
 # --------------------------------------------------
@@ -96,6 +99,7 @@ def item_orders_list(request):
     for o in orders:
         data.append({
             "id": o.id,
+            "order_id": o.order_id,        # ✅ UNIQUE ORDER ID
             "client_id": o.client_id,
 
             "customer_name": o.customer_name,
@@ -107,14 +111,16 @@ def item_orders_list(request):
             "barcode": o.barcode,
 
             "payment_type": o.payment_type,
-            "price": float(o.price) if o.price is not None else 0,
+            "price": float(o.price),
             "quantity": o.quantity,
+            "amount": float(o.amount),
 
             "username": o.username,
             "remark": o.remark,
+            "device_id": o.device_id,      # ✅ NEW
 
-            "date": o.created_date.strftime('%Y-%m-%d') if o.created_date else None,
-            "time": o.created_time.strftime('%H:%M:%S') if o.created_time else None,
+            "created_date": o.created_date.strftime('%Y-%m-%d'),
+            "created_time": o.created_time.strftime('%H:%M:%S')
         })
 
     return JsonResponse({
@@ -122,3 +128,4 @@ def item_orders_list(request):
         "total": len(data),
         "orders": data
     })
+

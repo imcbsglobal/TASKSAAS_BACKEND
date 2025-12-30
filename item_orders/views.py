@@ -96,17 +96,15 @@ def item_orders_list(request):
     if error:
         return error
 
-    client_id = request.GET.get("client_id")
+    client_id = payload.get("client_id")
 
-    orders = ItemOrders.objects.all()
-    if client_id:
-        orders = orders.filter(client_id=client_id)
+    orders = ItemOrders.objects.filter(client_id=client_id)
 
     data = []
     for o in orders:
         data.append({
             "id": o.id,
-            "order_id": o.order_id,        # ✅ UNIQUE ORDER ID
+            "order_id": o.order_id,
             "client_id": o.client_id,
 
             "customer_name": o.customer_name,
@@ -118,13 +116,13 @@ def item_orders_list(request):
             "barcode": o.barcode,
 
             "payment_type": o.payment_type,
-            "price": float(o.price),
+            "price": float(o.price) if o.price else 0,
             "quantity": o.quantity,
-            "amount": float(o.amount),
+            "amount": float(o.amount) if o.amount else 0,
 
             "username": o.username,
             "remark": o.remark,
-            "device_id": o.device_id,      # ✅ NEW
+            "device_id": o.device_id,
 
             "created_date": o.created_date.strftime('%Y-%m-%d'),
             "created_time": o.created_time.strftime('%H:%M:%S')
@@ -135,4 +133,3 @@ def item_orders_list(request):
         "total": len(data),
         "orders": data
     })
-

@@ -52,6 +52,13 @@ def create_item_order(request):
     try:
         data = json.loads(request.body)
 
+        # ✅ REQUIRED FIELD CHECK
+        if not data.get("device_id"):
+            return JsonResponse({
+                "success": False,
+                "error": "device_id is required"
+            }, status=400)
+
         order = ItemOrders.objects.create(
             customer_name=data.get("customer_name"),
             customer_code=data.get("customer_code"),
@@ -70,13 +77,13 @@ def create_item_order(request):
             username=data.get("username"),
             remark=data.get("remark"),
 
-            device_id=data.get("device_id")  # ✅ NEW
+            device_id=data.get("device_id")  # ✅ REQUIRED
         )
 
         return JsonResponse({
             "success": True,
             "message": "Order created successfully",
-            "order_id": order.order_id   # ✅ SHOW UNIQUE ORDER ID
+            "order_id": order.order_id
         })
 
     except Exception as e:

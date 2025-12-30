@@ -398,7 +398,7 @@ class ItemOrders(models.Model):
     remark = models.TextField(blank=True, null=True)
 
     # ✅ NEW
-    device_id = models.CharField(max_length=100, blank=True, null=True)
+    device_id = models.CharField(max_length=100)
 
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)

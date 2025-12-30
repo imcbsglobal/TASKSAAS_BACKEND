@@ -339,13 +339,22 @@ class Collection(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     type = models.CharField(max_length=50)
     client_id = models.CharField(max_length=100)
-    created_by = models.CharField(max_length=100, blank=True, null=True)  # ✅ NEW
 
-    # Auto date & time
+    # ✅ Optional fields
+    cheque_no = models.CharField(max_length=100, blank=True, null=True)
+    ref_no = models.CharField(max_length=100, blank=True, null=True)
+    remark = models.TextField(blank=True, null=True)
+
+    # created info
+    created_by = models.CharField(max_length=100, blank=True, null=True)
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
 
-    # ✅ Status (ONLY 2 values allowed)
+    # ✅ uploaded info (AUTO when status change)
+    uploaded_date = models.DateField(blank=True, null=True)
+    uploaded_time = models.TimeField(blank=True, null=True)
+    uploaded_username = models.CharField(max_length=100, blank=True, null=True)
+
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
@@ -355,12 +364,10 @@ class Collection(models.Model):
     class Meta:
         db_table = 'collection'
         managed = True
-        indexes = [
-            models.Index(fields=['client_id']),
-        ]
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
     
 from django.db import models
 

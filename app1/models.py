@@ -370,35 +370,58 @@ class Collection(models.Model):
 
 from django.db import models
 import uuid
+
+
 class ItemOrders(models.Model):
 
     STATUS_CHOICES = [
         ('created', 'Created'),
         ('completed', 'Completed'),
-        ('cancelled', 'Cancelled')
+        ('cancelled', 'Cancelled'),
     ]
 
-    order_id = models.CharField(max_length=50, unique=True, editable=False)
+    # ✅ UNIQUE AUTO ORDER ID
+    order_id = models.CharField(
+        max_length=50,
+        unique=True,
+        editable=False
+    )
 
+    # -------------------------
+    # CUSTOMER DETAILS
+    # -------------------------
     customer_name = models.CharField(max_length=200)
     customer_code = models.CharField(max_length=100)
     area = models.CharField(max_length=200)
 
+    # -------------------------
+    # PRODUCT DETAILS
+    # -------------------------
     product_name = models.CharField(max_length=200)
     item_code = models.CharField(max_length=100)
     barcode = models.CharField(max_length=100)
 
-    payment_type = models.CharField(max_length=50)
+    # -------------------------
+    # PAYMENT DETAILS
+    # -------------------------
+    payment_type = models.CharField(max_length=50)   # Cash / Card / UPI / Cheque
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.PositiveIntegerField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
 
+    # -------------------------
+    # SYSTEM DETAILS
+    # -------------------------
     client_id = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
     remark = models.TextField(blank=True, null=True)
 
+    # ✅ REQUIRED DEVICE ID
     device_id = models.CharField(max_length=100)
 
+    # -------------------------
+    # STATUS DETAILS
+    # -------------------------
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
@@ -409,11 +432,26 @@ class ItemOrders(models.Model):
     status_changed_time = models.TimeField(blank=True, null=True)
     status_changed_by = models.CharField(max_length=100, blank=True, null=True)
 
+    # -------------------------
+    # CREATED DATE & TIME
+    # -------------------------
     created_date = models.DateField(auto_now_add=True)
     created_time = models.TimeField(auto_now_add=True)
 
+    # -------------------------
+    # SAVE OVERRIDE
+    # -------------------------
     def save(self, *args, **kwargs):
         if not self.order_id:
-            import uuid
             self.order_id = f"ORD-{uuid.uuid4().hex[:10].upper()}"
         super().save(*args, **kwargs)
+
+    # -------------------------
+    # META CONFIG
+    # -------------------------
+    class Meta:
+        db_table = "item_orders"     # ✅ IMPORTANT (existing DB table)
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"{self.order_id} - {self.customer_name}"

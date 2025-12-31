@@ -212,7 +212,7 @@ class AccProductPhoto(models.Model):
 class AccGoddown(models.Model):
     goddownid = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(max_length=200)
-    client_id = models.CharField(max_lengtrh=100)
+    client_id = models.CharField(max_length=100)
 
     class Meta:
         db_table = 'acc_goddown'

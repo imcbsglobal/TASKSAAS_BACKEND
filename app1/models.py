@@ -378,7 +378,7 @@ class ItemOrders(models.Model):
         ('completed', 'Completed'),
     ]
 
-    order_id = models.CharField(max_length=50, unique=True, editable=False)
+    order_id = models.CharField(max_length=50, editable=False)
 
     customer_name = models.CharField(max_length=200)
     customer_code = models.CharField(max_length=100)

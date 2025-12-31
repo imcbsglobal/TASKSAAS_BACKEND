@@ -55,13 +55,13 @@ class AccMaster(models.Model):
     Connected via 'code' field to other tables
     """
     code = models.CharField(max_length=30, primary_key=True)
-    name = models.CharField(max_length=200, blank=True, null=True)#
+    name = models.CharField(max_length=200, blank=True, null=True)
     super_code = models.CharField(max_length=5, blank=True, null=True)
-    opening_balance = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
-    debit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
-    credit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
-    place = models.CharField(max_length=100, blank=True, null=True)#
-    phone2 = models.CharField(max_length=60, blank=True, null=True)#
+    opening_balance = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    debit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    credit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    place = models.CharField(max_length=100, blank=True, null=True)
+    phone2 = models.CharField(max_length=60, blank=True, null=True)
     openingdepartment = models.CharField(max_length=100, blank=True, null=True)
     area = models.CharField(max_length=200, blank=True, null=True)
     address = models.CharField(max_length=200, blank=True, null=True)
@@ -84,9 +84,9 @@ class AccLedgers(models.Model):
     """
     id = models.AutoField(primary_key=True)
     code = models.CharField(max_length=30)  # Links to AccMaster.code
-    particulars = models.CharField(max_length=500, blank=True, null=True)#
-    debit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
-    credit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
+    particulars = models.CharField(max_length=500, blank=True, null=True)
+    debit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    credit = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     entry_mode = models.CharField(max_length=20, blank=True, null=True)
     entry_date = models.DateField(blank=True, null=True)#
     voucher_no = models.IntegerField(blank=True, null=True)
@@ -107,8 +107,8 @@ class AccInvmast(models.Model):
     modeofpayment = models.CharField(max_length=10, blank=True, null=True)
     customerid = models.CharField(max_length=30, blank=True, null=True)  # Links to AccMaster.code
     invdate = models.DateField(blank=True, null=True)#
-    nettotal = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
-    paid = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)#
+    nettotal = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    paid = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
     bill_ref = models.CharField(max_length=100, blank=True, null=True)
     client_id = models.CharField(max_length=100)
 

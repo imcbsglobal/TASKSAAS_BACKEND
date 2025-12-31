@@ -130,41 +130,40 @@ def item_orders_list(request):
 
     client_id = payload.get("client_id")
 
-    orders = ItemOrders.objects.filter(client_id=client_id)
+    orders = ItemOrders.objects.filter(client_id=client_id).order_by('-id')
 
-    data = []
+    grouped_orders = {}
+
     for o in orders:
-        data.append({
-            "id": o.id,
-            "order_id": o.order_id,
-            "client_id": o.client_id,
+        if o.order_id not in grouped_orders:
+            grouped_orders[o.order_id] = {
+                "order_id": o.order_id,
+                "customer_name": o.customer_name,
+                "customer_code": o.customer_code,
+                "area": o.area,
+                "payment_type": o.payment_type,
+                "username": o.username,
+                "remark": o.remark,
+                "created_date": o.created_date.strftime('%Y-%m-%d'),
+                "created_time": o.created_time.strftime('%H:%M:%S'),
+                "items": []
+            }
 
-            "customer_name": o.customer_name,
-            "customer_code": o.customer_code,
-            "area": o.area,
-
+        grouped_orders[o.order_id]["items"].append({
             "product_name": o.product_name,
             "item_code": o.item_code,
             "barcode": o.barcode,
-
-            "payment_type": o.payment_type,
-            "price": float(o.price) if o.price else 0,
+            "price": float(o.price),
             "quantity": o.quantity,
-            "amount": float(o.amount) if o.amount else 0,
-
-            "username": o.username,
-            "remark": o.remark,
-            "device_id": o.device_id,
-
-            "created_date": o.created_date.strftime('%Y-%m-%d'),
-            "created_time": o.created_time.strftime('%H:%M:%S')
+            "amount": float(o.amount)
         })
 
     return JsonResponse({
         "success": True,
-        "total": len(data),
-        "orders": data
+        "total_orders": len(grouped_orders),
+        "orders": list(grouped_orders.values())
     })
+
 
 from django.utils import timezone
 @csrf_exempt

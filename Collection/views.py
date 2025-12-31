@@ -73,14 +73,19 @@ def create_collection(request):
 
 
 
-# ---------------- GET API ----------------
 @api_view(['GET'])
 def list_collections(request):
     client_id, username = get_user_from_token(request)
     if not client_id:
-        return Response({'success': False, 'error': 'Invalid token'}, status=401)
+        return Response(
+            {'success': False, 'error': 'Invalid token'},
+            status=401
+        )
 
-    qs = Collection.objects.filter(client_id=client_id).values(
+    collections = Collection.objects.filter(
+        client_id=client_id,
+        status='uploaded to server'   # ✅ IMPORTANT FILTER
+    ).values(
         'id',
         'code',
         'name',
@@ -102,9 +107,9 @@ def list_collections(request):
 
     return Response({
         'success': True,
-        'data': list(qs)
-    })
-
+        'count': collections.count(),
+        'data': list(collections)
+    }, status=200)
 
 
 @api_view(['POST'])

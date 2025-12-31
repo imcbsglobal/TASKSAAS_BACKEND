@@ -58,31 +58,55 @@ def create_item_order(request):
                 "error": "device_id is required"
             }, status=400)
 
-        order = ItemOrders.objects.create(
-            customer_name=data.get("customer_name"),
-            customer_code=data.get("customer_code"),
-            area=data.get("area"),
+        items = data.get("items", [])
+        if not items:
+            return JsonResponse({
+                "success": False,
+                "error": "items list is required"
+            }, status=400)
 
-            product_name=data.get("product_name"),
-            item_code=data.get("item_code"),
-            barcode=data.get("barcode"),
+        # ✅ Generate ONE order_id
+        import uuid
+        order_id = f"ORD-{uuid.uuid4().hex[:10].upper()}"
 
-            payment_type=data.get("payment_type"),
-            price=data.get("price"),
-            quantity=data.get("quantity"),
-            amount=data.get("amount"),
+        created_items = []
 
-            client_id=payload.get("client_id"),  # ✅ FIXED
-            username=data.get("username"),
-            remark=data.get("remark"),
+        for item in items:
+            order = ItemOrders.objects.create(
+                order_id=order_id,
 
-            device_id=data.get("device_id")
-        )
+                customer_name=data.get("customer_name"),
+                customer_code=data.get("customer_code"),
+                area=data.get("area"),
+
+                product_name=item.get("product_name"),
+                item_code=item.get("item_code"),
+                barcode=item.get("barcode"),
+
+                payment_type=data.get("payment_type"),
+                price=item.get("price"),
+                quantity=item.get("quantity"),
+                amount=item.get("amount"),
+
+                client_id=payload.get("client_id"),
+                username=data.get("username"),
+                remark=data.get("remark"),
+
+                device_id=data.get("device_id")
+            )
+
+            created_items.append({
+                "product_name": order.product_name,
+                "item_code": order.item_code,
+                "quantity": order.quantity,
+                "amount": float(order.amount)
+            })
 
         return JsonResponse({
             "success": True,
             "message": "Order created successfully",
-            "order_id": order.order_id
+            "order_id": order_id,
+            "items": created_items
         })
 
     except Exception as e:
@@ -90,6 +114,7 @@ def create_item_order(request):
             "success": False,
             "error": str(e)
         }, status=400)
+
 
 
 

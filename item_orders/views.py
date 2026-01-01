@@ -125,15 +125,22 @@ def create_item_order(request):
 # --------------------------------------------------
 # LIST ITEM ORDERS (GET)
 # --------------------------------------------------
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
 @require_http_methods(["GET"])
 def item_orders_list(request):
     payload, error = get_client_from_token(request)
     if error:
-        return error
+        return JsonResponse({"success": False, "error": error}, status=401)
 
     client_id = payload.get("client_id")
 
-    orders = ItemOrders.objects.filter(client_id=client_id).order_by('-id')
+    # ✅ SHOW ONLY "uploaded to server"
+    orders = ItemOrders.objects.filter(
+        client_id=client_id,
+        status="uploaded to server"
+    ).order_by('-id')
 
     grouped_orders = {}
 
@@ -166,6 +173,7 @@ def item_orders_list(request):
         "total_orders": len(grouped_orders),
         "orders": list(grouped_orders.values())
     })
+
 
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt

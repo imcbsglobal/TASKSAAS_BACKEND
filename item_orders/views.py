@@ -171,7 +171,6 @@ import json
 from django.http import JsonResponse
 from .models import ItemOrders
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def change_order_status(request):
@@ -182,10 +181,7 @@ def change_order_status(request):
     try:
         data = json.loads(request.body)
     except Exception:
-        return JsonResponse({
-            "success": False,
-            "error": "Invalid JSON"
-        }, status=400)
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
     order_id = data.get("order_id")
     status_value = data.get("status")
@@ -204,7 +200,6 @@ def change_order_status(request):
             "error": f"Invalid status. Allowed values: {ALLOWED_STATUSES}"
         }, status=400)
 
-    # ✅ FILTER (not get)
     orders = ItemOrders.objects.filter(
         order_id=order_id,
         client_id=payload.get("client_id")
@@ -218,12 +213,11 @@ def change_order_status(request):
 
     now = timezone.localtime()
 
-    # ✅ UPDATE ALL ITEMS IN THAT ORDER
     orders.update(
         status=status_value,
         status_changed_date=now.date(),
         status_changed_time=now.time(),
-        status_changed_by=payload.get("username")
+        status_changed_by=payload.get("username") or payload.get("user") or "system"
     )
 
     return JsonResponse({

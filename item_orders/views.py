@@ -11,31 +11,34 @@ from .models import ItemOrders
 # --------------------------------------------------
 # TOKEN VALIDATION
 # --------------------------------------------------
+import jwt
+from django.conf import settings
+
+
 def get_client_from_token(request):
     auth_header = request.META.get('HTTP_AUTHORIZATION')
 
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return None, JsonResponse(
-            {'success': False, 'error': 'Missing or invalid authorization header'},
-            status=401
-        )
+    if not auth_header:
+        return None, "Authorization header missing"
 
-    token = auth_header.split(' ')[1]
+    if not auth_header.startswith("Bearer "):
+        return None, "Invalid authorization format"
+
+    token = auth_header.split(" ", 1)[1]
 
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=["HS256"]
+        )
         return payload, None
 
     except jwt.ExpiredSignatureError:
-        return None, JsonResponse(
-            {'success': False, 'error': 'Token expired'},
-            status=401
-        )
-    except jwt.InvalidTokenError as e:
-        return None, JsonResponse(
-            {'success': False, 'error': str(e)},
-            status=401
-        )
+        return None, "Token expired"
+
+    except jwt.InvalidTokenError:
+        return None, "Invalid token"
 
 
 
@@ -170,13 +173,12 @@ from django.views.decorators.http import require_http_methods
 import json
 from django.http import JsonResponse
 from .models import ItemOrders
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def change_order_status(request):
     payload, error = get_client_from_token(request)
     if error:
-        return error
+        return JsonResponse({"success": False, "error": error}, status=401)
 
     try:
         data = json.loads(request.body)
@@ -186,7 +188,7 @@ def change_order_status(request):
     order_id = data.get("order_id")
     status_value = data.get("status")
 
-    ALLOWED_STATUSES = ['uploaded to server', 'completed']
+    ALLOWED_STATUSES = ["uploaded to server", "completed"]
 
     if not order_id or not status_value:
         return JsonResponse({
@@ -197,7 +199,7 @@ def change_order_status(request):
     if status_value not in ALLOWED_STATUSES:
         return JsonResponse({
             "success": False,
-            "error": f"Invalid status. Allowed values: {ALLOWED_STATUSES}"
+            "error": f"Invalid status. Allowed: {ALLOWED_STATUSES}"
         }, status=400)
 
     orders = ItemOrders.objects.filter(

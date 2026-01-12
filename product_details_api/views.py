@@ -65,14 +65,14 @@ def get_product_details(request):
         .values_list("goddownid", "name")
     )
 
-    # ---------------- GODDOWN STOCK (LOAD ONCE) ----------------
+    # ---------------- GODDOWN STOCK ----------------
     stock_qs = AccGoddownStock.objects.filter(client_id=client_id)
     stock_map = {}
     for s in stock_qs:
         product_code = str(s.product).strip()
         stock_map.setdefault(product_code, []).append(s)
 
-    # ---------------- PRODUCT PHOTOS (LOAD ONCE) ----------------
+    # ---------------- PRODUCT PHOTOS ----------------
     photo_qs = AccProductPhoto.objects.filter(client_id=client_id)
     photo_map = {}
     for ph in photo_qs:
@@ -97,20 +97,27 @@ def get_product_details(request):
         pdata = ProductSerializer(product).data
         product_code = str(product.code).strip()
 
-        # ---------- BATCHES ----------
+        # ---------- BATCHES (UPDATED PRICE FORMAT) ----------
         batches = []
         for b in product.batch_list:
             bdata = ProductBatchSerializer(b).data
-            transformed = {}
+
+            prices = []
+            other_fields = {}
 
             for field, value in bdata.items():
                 if field in price_map and value is not None:
-                    price_code = price_map[field]
-                    transformed[price_codes.get(price_code, field)] = value
+                    code = price_map[field]
+                    prices.append({
+                        "price_code": code,
+                        "price_name": price_codes.get(code, code),
+                        "value": value
+                    })
                 else:
-                    transformed[field] = value
+                    other_fields[field] = value
 
-            batches.append(transformed)
+            other_fields["prices"] = prices
+            batches.append(other_fields)
 
         pdata["batches"] = batches
 

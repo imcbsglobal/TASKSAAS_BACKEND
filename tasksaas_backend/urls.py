@@ -19,6 +19,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from settings_options.views import settings_options_api
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('app1.urls')),
@@ -31,6 +33,8 @@ urlpatterns = [
     path('api/product/', include('product_details_api.urls')),
     path('api/collection/', include('Collection.urls')),
     path("api/item-orders/", include("item_orders.urls")),
+    path("api/settings/", include("settings_options.urls")),
+
 
 
     

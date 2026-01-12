@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'area',
     'Collection',
     'item_orders',
+    "settings_options",
 ]
 
 # Parse CORS origins from environment variable

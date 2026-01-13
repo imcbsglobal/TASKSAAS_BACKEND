@@ -1,13 +1,15 @@
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
 import jwt
 
+from django.db import connection
 from .models import SettingsOptions
-from app1.models import AccPriceCode, AccUser   # ✅ FIXED IMPORT
 
 
+# =========================
+# Decode JWT
+# =========================
 def decode_jwt_token(request):
     auth_header = request.META.get("HTTP_AUTHORIZATION")
 
@@ -18,10 +20,14 @@ def decode_jwt_token(request):
 
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-    except Exception:
+    except Exception as e:
+        print("JWT ERROR:", e)
         return None
 
 
+# =========================
+# Settings Options API
+# =========================
 @api_view(["GET", "POST"])
 def settings_options_api(request):
     payload = decode_jwt_token(request)
@@ -39,50 +45,86 @@ def settings_options_api(request):
     # =====================
     if request.method == "GET":
 
-        price_codes = list(
-            AccPriceCode.objects
-            .filter(client_id=client_id)
-            .values("code", "name")
-        )
+        # -------- PRICE CODES --------
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT code, name
+                    FROM acc_pricecode
+                    WHERE client_id = %s
+                    ORDER BY name
+                """, [client_id])
 
-        roles = list(
-            AccUser.objects
-            .filter(client_id=client_id)
-            .exclude(role__isnull=True)
-            .exclude(role__exact="")
-            .values_list("role", flat=True)
-            .distinct()
-        )
+                price_codes = [
+                    {"code": row[0], "name": row[1]}
+                    for row in cursor.fetchall()
+                ]
+        except Exception as e:
+            print("PRICE CODE ERROR:", e)
+            price_codes = []
+
+        # -------- USERS (id = username) --------
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id
+                    FROM acc_users
+                    WHERE client_id = %s
+                    ORDER BY id
+                """, [client_id])
+
+                users = [
+                    {"id": row[0], "username": row[0]}
+                    for row in cursor.fetchall()
+                ]
+        except Exception as e:
+            print("USER ERROR:", e)
+            users = []
 
         return Response({
             "client_id": client_id,
             "order_rate_editable": options.order_rate_editable,
-            "default_price_codes": options.default_price_codes,
-            "protected_price_categories": options.protected_price_categories,
+            "read_price_category": options.read_price_category,  # ✅ NEW
+            "default_price_code": options.default_price_code,
+            "protected_price_users": options.protected_price_users,
             "price_codes": price_codes,
-            "roles": roles
+            "users": users
         })
 
     # =====================
     # POST
     # =====================
-    options.order_rate_editable = request.data.get(
-        "order_rate_editable",
-        options.order_rate_editable
-    )
-    options.default_price_codes = request.data.get(
-        "default_price_codes",
-        options.default_price_codes
-    )
-    options.protected_price_categories = request.data.get(
-        "protected_price_categories",
-        options.protected_price_categories
-    )
+    try:
+        options.order_rate_editable = request.data.get(
+            "order_rate_editable",
+            options.order_rate_editable
+        )
 
-    options.save()
+        options.read_price_category = request.data.get(
+            "read_price_category",
+            options.read_price_category
+        )
 
-    return Response({
-        "success": True,
-        "client_id": client_id,
-        "message": "Settings saved successfully"
-    })
+        options.default_price_code = request.data.get(
+            "default_price_code",
+            options.default_price_code
+        )
+
+        options.protected_price_users = request.data.get(
+            "protected_price_users",
+            options.protected_price_users
+        )
+
+        options.save()
+
+        return Response({
+            "success": True,
+            "message": "Settings saved successfully"
+        })
+
+    except Exception as e:
+        print("SAVE ERROR:", e)
+        return Response(
+            {"error": "Failed to save settings"},
+            status=500
+        )

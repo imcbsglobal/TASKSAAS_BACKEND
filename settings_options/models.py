@@ -5,13 +5,18 @@ class SettingsOptions(models.Model):
 
     order_rate_editable = models.BooleanField(default=False)
 
-    default_price_codes = models.JSONField(default=list)
+    default_price_code = models.CharField(max_length=50, null=True, blank=True)
 
-    protected_price_categories = models.JSONField(default=dict)
+    protected_price_users = models.JSONField(default=dict)
+
+    # ✅ NEW OPTION
+    read_price_category = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "settings_options"
 
     def __str__(self):
         return self.client_id
-

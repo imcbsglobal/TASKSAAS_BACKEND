@@ -63,18 +63,22 @@ def settings_options_api(request):
             print("PRICE CODE ERROR:", e)
             price_codes = []
 
-        # -------- USERS (id = username) --------
+        # -------- USERS (id = username, include role) --------
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT id
+                    SELECT id, role
                     FROM acc_users
                     WHERE client_id = %s
                     ORDER BY id
                 """, [client_id])
 
                 users = [
-                    {"id": row[0], "username": row[0]}
+                    {
+                        "id": row[0],
+                        "username": row[0],     # id itself is username
+                        "role": row[1]          # role from DB
+                    }
                     for row in cursor.fetchall()
                 ]
         except Exception as e:
@@ -84,7 +88,7 @@ def settings_options_api(request):
         return Response({
             "client_id": client_id,
             "order_rate_editable": options.order_rate_editable,
-            "read_price_category": options.read_price_category,  # ✅ NEW
+            "read_price_category": options.read_price_category,
             "default_price_code": options.default_price_code,
             "protected_price_users": options.protected_price_users,
             "price_codes": price_codes,

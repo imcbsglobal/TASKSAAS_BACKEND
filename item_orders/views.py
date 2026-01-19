@@ -237,3 +237,54 @@ def change_order_status(request):
         "total_items_updated": orders.count(),
         "status": status_value
     })
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+@require_http_methods(["GET"])
+def item_orders_list_all(request):
+    payload, error = get_client_from_token(request)
+    if error:
+        return JsonResponse({"success": False, "error": error}, status=401)
+
+    client_id = payload.get("client_id")
+
+    # ✅ NO status filter → show ALL
+    orders = ItemOrders.objects.filter(
+        client_id=client_id
+    ).order_by('-id')
+
+    grouped_orders = {}
+
+    for o in orders:
+        if o.order_id not in grouped_orders:
+            grouped_orders[o.order_id] = {
+                "order_id": o.order_id,
+                "customer_name": o.customer_name,
+                "customer_code": o.customer_code,
+                "area": o.area,
+                "payment_type": o.payment_type,
+                "username": o.username,
+                "remark": o.remark,
+                "status": o.status,  # ✅ include status
+                "created_date": o.created_date.strftime('%Y-%m-%d'),
+                "created_time": o.created_time.strftime('%H:%M:%S'),
+                "items": []
+            }
+
+        grouped_orders[o.order_id]["items"].append({
+            "product_name": o.product_name,
+            "item_code": o.item_code,
+            "barcode": o.barcode,
+            "price": float(o.price),
+            "quantity": o.quantity,
+            "amount": float(o.amount)
+        })
+
+    return JsonResponse({
+        "success": True,
+        "total_orders": len(grouped_orders),
+        "orders": list(grouped_orders.values())
+    })

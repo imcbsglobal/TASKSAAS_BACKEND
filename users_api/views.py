@@ -8,7 +8,7 @@ from app1.models import AccUser   # existing model
 
 @api_view(['GET'])
 def list_users(request):
-    """Return only id, role, client_id for logged user's client_id"""
+    """Return only id, role, accountcode, client_id for logged user's client_id"""
 
     # 1. Read token
     auth_header = request.META.get('HTTP_AUTHORIZATION')
@@ -31,7 +31,10 @@ def list_users(request):
 
     # 3. Filter users by same client_id
     users = AccUser.objects.filter(client_id=client_id).values(
-        'id', 'role', 'client_id'
+        'id',
+        'role',
+        'accountcode',   # ✅ ONLY ADDITION
+        'client_id'
     )
 
     return Response({

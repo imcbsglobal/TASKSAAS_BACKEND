@@ -119,6 +119,11 @@ def settings_options_api(request):
             "protected_price_users",
             options.protected_price_users
         )
+        
+        options.barcode_based_list = request.data.get(
+            "barcode_based_list",
+            options.barcode_based_list
+        )
 
         options.save()
 

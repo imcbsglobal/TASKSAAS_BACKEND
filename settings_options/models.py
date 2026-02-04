@@ -11,6 +11,7 @@ class SettingsOptions(models.Model):
 
     # ✅ NEW OPTION
     read_price_category = models.BooleanField(default=False)
+    barcode_based_list = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

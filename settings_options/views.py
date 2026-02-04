@@ -89,6 +89,7 @@ def settings_options_api(request):
             "client_id": client_id,
             "order_rate_editable": options.order_rate_editable,
             "read_price_category": options.read_price_category,
+            "barcode_based_list": options.barcode_based_list,
             "default_price_code": options.default_price_code,
             "protected_price_users": options.protected_price_users,
             "price_codes": price_codes,

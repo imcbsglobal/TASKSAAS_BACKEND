@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from django.db.models import Prefetch
 import jwt
 from django.conf import settings
+from app1.models import AccDepartments
 
 from app1.models import (
     AccProduct,
@@ -59,6 +60,12 @@ def get_product_details(request):
         "cost": "CO",
     }
 
+    # ---------------- DEPARTMENTS (ADDED) ----------------
+    department_map = dict(
+        AccDepartments.objects.filter(client_id=client_id)
+        .values_list("department_id", "department")
+    )
+
     # ---------------- GODDOWN MASTER ----------------
     goddown_map = dict(
         AccGoddown.objects.filter(client_id=client_id)
@@ -97,7 +104,11 @@ def get_product_details(request):
         pdata = ProductSerializer(product).data
         product_code = str(product.code).strip()
 
-        # ---------- BATCHES (UPDATED PRICE FORMAT) ----------
+        # ✅ DEPARTMENT NAME (ONLY ADDITION)
+        dept_id = (pdata.get("category") or "").strip()
+        pdata["department_name"] = department_map.get(dept_id)
+
+        # ---------- BATCHES ----------
         batches = []
         for b in product.batch_list:
             bdata = ProductBatchSerializer(b).data
@@ -148,3 +159,4 @@ def get_product_details(request):
         },
         status=200
     )
+

@@ -35,19 +35,24 @@ def create_sales_return(request):
     if error:
         return JsonResponse({"success": False, "error": error}, status=401)
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
 
     items = data.get("items", [])
     if not items:
         return JsonResponse({"success": False, "error": "items required"}, status=400)
 
-    order_id = f"SR-{__import__('uuid').uuid4().hex[:10].upper()}"
+    import uuid
+    order_id = f"SR-{uuid.uuid4().hex[:10].upper()}"
 
     created_items = []
 
     for item in items:
         sr = SalesReturn.objects.create(
             order_id=order_id,
+
             customer_name=data.get("customer_name"),
             customer_code=data.get("customer_code"),
             area=data.get("area"),
@@ -56,14 +61,15 @@ def create_sales_return(request):
             item_code=item.get("item_code"),
             barcode=item.get("barcode"),
 
-            payment_type=data.get("payment_type"),
             price=item.get("price"),
             quantity=item.get("quantity"),
             amount=item.get("amount"),
 
+            # ✅ ITEM LEVEL REMARK (OPTIONAL)
+            remark=item.get("remark"),
+
             client_id=payload.get("client_id"),
             username=data.get("username"),
-            remark=data.get("remark"),
             device_id=data.get("device_id")
         )
 
@@ -71,7 +77,8 @@ def create_sales_return(request):
             "product_name": sr.product_name,
             "item_code": sr.item_code,
             "quantity": sr.quantity,
-            "amount": float(sr.amount)
+            "amount": float(sr.amount),
+            "remark": sr.remark
         })
 
     return JsonResponse({
@@ -101,10 +108,8 @@ def sales_return_list(request):
             "customer_name": r.customer_name,
             "customer_code": r.customer_code,
             "area": r.area,
-            "payment_type": r.payment_type,
             "username": r.username,
-            "remark": r.remark,
-            "status": r.status,  # ✅ ADDED
+            "status": r.status,
             "created_date": r.created_date.strftime('%Y-%m-%d'),
             "created_time": r.created_time.strftime('%H:%M:%S'),
             "items": []
@@ -114,7 +119,8 @@ def sales_return_list(request):
             "barcode": r.barcode,
             "price": float(r.price),
             "quantity": r.quantity,
-            "amount": float(r.amount)
+            "amount": float(r.amount),
+            "remark": r.remark   # ✅ SHOW ITEM REMARK
         })
 
     return JsonResponse({
@@ -122,7 +128,6 @@ def sales_return_list(request):
         "total": len(grouped),
         "returns": list(grouped.values())
     })
-
 
 
 # ---------------- STATUS CHANGE ----------------
@@ -160,7 +165,6 @@ def sales_return_status_change(request):
         client_id=payload.get("client_id")
     )
 
-    # ✅ THIS WAS MISSING
     if not qs.exists():
         return JsonResponse({
             "success": False,

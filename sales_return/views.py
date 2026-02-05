@@ -1,5 +1,6 @@
 import json
 import jwt
+import uuid
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -44,7 +45,6 @@ def create_sales_return(request):
     if not items:
         return JsonResponse({"success": False, "error": "items required"}, status=400)
 
-    import uuid
     order_id = f"SR-{uuid.uuid4().hex[:10].upper()}"
 
     created_items = []
@@ -65,8 +65,8 @@ def create_sales_return(request):
             quantity=item.get("quantity"),
             amount=item.get("amount"),
 
-            # ✅ ITEM LEVEL REMARK (OPTIONAL)
-            remark=item.get("remark"),
+            # ✅ ITEM-LEVEL REMARK
+            product_remark=item.get("remark"),
 
             client_id=payload.get("client_id"),
             username=data.get("username"),
@@ -78,7 +78,7 @@ def create_sales_return(request):
             "item_code": sr.item_code,
             "quantity": sr.quantity,
             "amount": float(sr.amount),
-            "remark": sr.remark
+            "remark": sr.product_remark
         })
 
     return JsonResponse({
@@ -120,7 +120,7 @@ def sales_return_list(request):
             "price": float(r.price),
             "quantity": r.quantity,
             "amount": float(r.amount),
-            "remark": r.remark   # ✅ SHOW ITEM REMARK
+            "remark": r.product_remark   # ✅ SHOW ITEM REMARK
         })
 
     return JsonResponse({
@@ -174,10 +174,7 @@ def sales_return_status_change(request):
     now = timezone.localtime()
 
     qs.update(
-        status=status_value,
-        status_changed_date=now.date(),
-        status_changed_time=now.time(),
-        status_changed_by=payload.get("username") or "system"
+        status=status_value
     )
 
     return JsonResponse({

@@ -144,6 +144,12 @@ class CashAndBankAccMaster(models.Model):
 class AccProduct(models.Model):
     code = models.CharField(max_length=30, primary_key=True)
     name = models.CharField(max_length=200, blank=True, null=True)
+    catagory = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True,
+        db_column="catagory"
+    )
     taxcode = models.CharField(max_length=10, blank=True, null=True)
     product = models.CharField(max_length=100, blank=True, null=True)
     brand = models.CharField(max_length=100, blank=True, null=True)

@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/collection/', include('Collection.urls')),
     path("api/item-orders/", include("item_orders.urls")),
     path("api/settings/", include("settings_options.urls")),
+    path("api/sales-return/", include("sales_return.urls")),
 
 
 

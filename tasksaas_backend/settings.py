@@ -82,6 +82,8 @@ INSTALLED_APPS = [
     'Collection',
     'item_orders',
     "settings_options",
+    'sales_return',
+
 ]
 
 # Parse CORS origins from environment variable

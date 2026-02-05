@@ -105,7 +105,7 @@ def get_product_details(request):
         product_code = str(product.code).strip()
 
         # ✅ DEPARTMENT NAME (ONLY ADDITION)
-        dept_id = (pdata.get("category") or "").strip()
+        dept_id = (pdata.get("catagory") or "").strip()
         pdata["department_name"] = department_map.get(dept_id)
 
         # ---------- BATCHES ----------

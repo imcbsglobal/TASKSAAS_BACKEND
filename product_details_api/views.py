@@ -61,10 +61,13 @@ def get_product_details(request):
     }
 
     # ---------------- DEPARTMENTS (ADDED) ----------------
-    department_map = dict(
-        AccDepartments.objects.filter(client_id=client_id)
-        .values_list("department_id", "department")
-    )
+    department_map = {
+        dept_id.strip().upper(): dept_name
+        for dept_id, dept_name in AccDepartments.objects
+            .filter(client_id=client_id)
+            .values_list("department_id", "department")
+    }
+
 
     # ---------------- GODDOWN MASTER ----------------
     goddown_map = dict(

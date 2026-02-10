@@ -82,6 +82,11 @@ class PunchIn(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     client_id = models.CharField(max_length=64, db_index=True)
 
+    # ✅ NEW FIELDS (ONLY FOR PUNCH-IN)
+    current_location = models.TextField()      # REQUIRED
+    shop_location = models.TextField()         # REQUIRED
+    punchin_status = models.CharField(max_length=50)  # REQUIRED (manual)
+
     # Track punchin and punchout
     punchin_time = models.DateTimeField(auto_now_add=True)   # when record is created
     punchout_time = models.DateTimeField(null=True, blank=True)  # filled later

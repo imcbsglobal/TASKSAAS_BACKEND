@@ -449,15 +449,20 @@ def punchin(request):
         if not client_id or not username:
             return Response({'error': 'Invalid token payload'}, status=401)
 
-        # Get request data
+        # 📥 Get request data
         firm_code = request.data.get('customerCode')
         latitude = request.data.get('latitude')
         longitude = request.data.get('longitude')
         notes = request.data.get('notes', '')
         address = request.data.get('address', '')
-        image_file = request.FILES.get('image')  # Get image file from frontend
+        image_file = request.FILES.get('image')
 
-        #  Validate required fields
+        # ✅ NEW REQUIRED FIELDS (ONLY ADDITION)
+        current_location = request.data.get('current_location')
+        shop_location = request.data.get('shop_location')
+        punchin_status = request.data.get('punchin_status')
+
+        # ✅ Existing validations (unchanged)
         if not firm_code:
             return Response({'error': 'firm_code is required'}, status=400)
         
@@ -466,8 +471,18 @@ def punchin(request):
 
         if not image_file:
             return Response({'error': 'Image file is required for punch-in'}, status=400)
-        
-        # ✅ Validate image file
+
+        # ✅ NEW validations
+        if not current_location:
+            return Response({'error': 'current_location is required'}, status=400)
+
+        if not shop_location:
+            return Response({'error': 'shop_location is required'}, status=400)
+
+        if not punchin_status:
+            return Response({'error': 'punchin_status is required'}, status=400)
+
+        # 🖼️ Image validation (unchanged)
         max_size = 5 * 1024 * 1024  # 5MB
         if image_file.size > max_size:
             return Response({'error': 'Image size must be less than 5MB'}, status=400)
@@ -476,7 +491,7 @@ def punchin(request):
         if image_file.content_type not in allowed_types:
             return Response({'error': 'Only JPG, JPEG, and PNG images are allowed'}, status=400)
 
-        #  Validate coordinates
+        # 📍 Coordinate validation (unchanged)
         try:
             lat = float(latitude)
             lng = float(longitude)
@@ -485,47 +500,47 @@ def punchin(request):
         except (ValueError, TypeError):
             return Response({'error': 'Invalid coordinate format'}, status=400)
 
-        #  Verify firm exists for this client
+        # 🏬 Firm validation (unchanged)
         try:
             firm = AccMaster.objects.get(code=firm_code, client_id=client_id)
         except AccMaster.DoesNotExist:
             return Response({'error': 'Invalid firm code for this client'}, status=404)
 
-        #  Check if user is already punched in today
+        # 🕒 Existing punch-in check (unchanged)
         from django.utils import timezone
         today = timezone.now().date()
         existing_punchin = PunchIn.objects.filter(
             client_id=client_id,
             created_by=username,
             punchin_time__date=today,
-            punchout_time__isnull=True  # Still punched in
+            punchout_time__isnull=True
         ).first()
 
-        # if existing_punchin:
-        #     return Response({
-        #         'error': 'You are already punched in today. Please punch out first.',
-        #         'existing_punchin_id': existing_punchin.id,
-        #         'punchin_time': existing_punchin.punchin_time.isoformat()
-        #     }, status=400)
-
-        #  Create punch-in record with image
+        # ✅ Create punch-in record
         with transaction.atomic():
             punchin_record = PunchIn.objects.create(
                 firm=firm,
                 client_id=client_id,
                 latitude=lat,
                 longitude=lng,
-                photo=image_file,  # Django will handle file storage automatically
+
+                # ✅ NEW FIELDS STORED
+                current_location=current_location,
+                shop_location=shop_location,
+                punchin_status=punchin_status,
+
+                photo=image_file,
                 address=address,
                 notes=notes,
                 created_by=username,
+
+                # ❌ OLD STATUS UNCHANGED
                 status='pending'
             )
 
             logger.info(f"Punch-in created successfully for user {username}, ID: {punchin_record.id}")
 
-        # ✅ Prepare response data
-        # Photo URL will be from Cloudflare R2
+        # ✅ Response (extended, old keys untouched)
         photo_url = punchin_record.photo.url if punchin_record.photo else None
         
         response_data = {
@@ -538,6 +553,9 @@ def punchin(request):
                 'punchin_time': punchin_record.punchin_time.isoformat(),
                 'latitude': float(punchin_record.latitude),
                 'longitude': float(punchin_record.longitude),
+                'current_location': punchin_record.current_location,
+                'shop_location': punchin_record.shop_location,
+                'punchin_status': punchin_record.punchin_status,
                 'photo_url': photo_url,
                 'address': punchin_record.address,
                 'status': punchin_record.status,
@@ -553,6 +571,7 @@ def punchin(request):
     except Exception as e:
         logger.error(f"Error in punchin for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
         return Response({'error': 'Punch-in failed'}, status=500)
+
 
 @api_view(['POST'])
 def punchout(request, id):

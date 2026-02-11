@@ -758,28 +758,31 @@ def punchin_table(request):
         user_role = payload.get('role')
         username = payload.get('username')
         startDate = request.GET.get('start_date')
-        endDate =request.GET.get('end_date')
+        endDate = request.GET.get('end_date')
 
         if startDate and endDate:
             date_filter = f"AND p.created_at >= '{startDate}' AND p.created_at < '{endDate}'::date + INTERVAL '1 day'"
         else:
             date_filter = ""
 
-        
         from django.db import connection
 
-        # Get dynamic table names
-        punchin_table = PunchIn._meta.db_table  # "punchin"
-        firm_table = AccMaster._meta.db_table   # "acc_master"
+        punchin_table = PunchIn._meta.db_table
+        firm_table = AccMaster._meta.db_table
 
-        # Role-based query construction
+        # ================= ADMIN QUERY =================
         if user_role and user_role.lower() == 'admin':
-            # Admin sees all punch-ins for the client
             sql_query = f"""
             SELECT 
                 p.id,
                 p.latitude,
                 p.longitude,
+
+                -- ✅ ADDED FIELDS
+                p.current_location,
+                p.shop_location,
+                p.punchin_status,
+
                 p.punchin_time,
                 p.punchout_time,
                 p.photo,
@@ -794,18 +797,26 @@ def punchin_table(request):
                 COALESCE(a.name, 'Unknown Store') as firm_name,
                 COALESCE(a.place, 'No address') as firm_place
             FROM {punchin_table} p
-            LEFT JOIN {firm_table} a ON p.firm_code = a.code AND p.client_id = a.client_id
+            LEFT JOIN {firm_table} a 
+                ON p.firm_code = a.code AND p.client_id = a.client_id
             WHERE p.client_id = %s {date_filter}
             ORDER BY p.punchin_time DESC
             """
             query_params = [client_id]
+
+        # ================= USER QUERY =================
         else:
-            # Regular user sees only their own punch-ins
             sql_query = f"""
             SELECT 
                 p.id,
                 p.latitude,
                 p.longitude,
+
+                -- ✅ ADDED FIELDS
+                p.current_location,
+                p.shop_location,
+                p.punchin_status,
+
                 p.punchin_time,
                 p.punchout_time,
                 p.photo,
@@ -820,7 +831,8 @@ def punchin_table(request):
                 COALESCE(a.name, 'Unknown Store') as firm_name,
                 COALESCE(a.place, 'No address') as firm_place
             FROM {punchin_table} p
-            LEFT JOIN {firm_table} a ON p.firm_code = a.code AND p.client_id = a.client_id
+            LEFT JOIN {firm_table} a 
+                ON p.firm_code = a.code AND p.client_id = a.client_id
             WHERE p.client_id = %s AND p.created_by = %s {date_filter}
             ORDER BY p.punchin_time DESC
             """
@@ -839,49 +851,31 @@ def punchin_table(request):
                 'count': 0
             }, status=200)
 
-        # Process rows into structured data
         data = []
         for row in rows:
             row_dict = dict(zip(columns, row))
 
-            # Safe coordinate conversion
             try:
                 latitude = float(row_dict['latitude']) if row_dict['latitude'] is not None else None
                 longitude = float(row_dict['longitude']) if row_dict['longitude'] is not None else None
             except (ValueError, TypeError):
                 latitude, longitude = None, None
 
-            # Safe timestamp formatting
-            try:
-                punchin_time = row_dict['punchin_time'].isoformat() if row_dict['punchin_time'] else None
-            except Exception:
-                punchin_time = str(row_dict['punchin_time']) if row_dict['punchin_time'] else None
+            punchin_time = row_dict['punchin_time'].isoformat() if row_dict['punchin_time'] else None
+            punchout_time = row_dict['punchout_time'].isoformat() if row_dict['punchout_time'] else None
 
-            try:
-                punchout_time = row_dict['punchout_time'].isoformat() if row_dict['punchout_time'] else None
-            except Exception:
-                punchout_time = str(row_dict['punchout_time']) if row_dict['punchout_time'] else None
-
-            # Calculate work duration if both times exist
             work_duration_hours = None
             if row_dict['punchin_time'] and row_dict['punchout_time']:
-                try:
-                    from django.utils import timezone
-                    if hasattr(row_dict['punchin_time'], 'timestamp') and hasattr(row_dict['punchout_time'], 'timestamp'):
-                        duration = row_dict['punchout_time'] - row_dict['punchin_time']
-                        work_duration_hours = round(duration.total_seconds() / 3600, 2)
-                except Exception:
-                    work_duration_hours = None
-            
-            # Build photo URL from Cloudflare R2
-            photo_path = row_dict.get('photo')
-            if photo_path:
-                # Construct full R2 URL
-                photo_url = f"{settings.CLOUDFLARE_R2_PUBLIC_URL}/{photo_path}" if not photo_path.startswith('http') else photo_path
-            else:
-                photo_url = None
+                duration = row_dict['punchout_time'] - row_dict['punchin_time']
+                work_duration_hours = round(duration.total_seconds() / 3600, 2)
 
-            # Build response record
+            photo_path = row_dict.get('photo')
+            photo_url = (
+                f"{settings.CLOUDFLARE_R2_PUBLIC_URL}/{photo_path}"
+                if photo_path and not photo_path.startswith('http')
+                else photo_path
+            )
+
             record = {
                 'id': row_dict['id'],
                 'firm_code': row_dict['firm_code'],
@@ -889,6 +883,12 @@ def punchin_table(request):
                 'firm_location': row_dict['firm_place'],
                 'latitude': latitude,
                 'longitude': longitude,
+
+                # ✅ ADDED FIELDS IN RESPONSE
+                'current_location': row_dict.get('current_location'),
+                'shop_location': row_dict.get('shop_location'),
+                'punchin_status': row_dict.get('punchin_status'),
+
                 'punchin_time': punchin_time,
                 'punchout_time': punchout_time,
                 'work_duration_hours': work_duration_hours,
@@ -898,7 +898,7 @@ def punchin_table(request):
                 'status': row_dict['status'] or 'pending',
                 'created_by': row_dict['created_by'] or 'Unknown',
                 'client_id': row_dict['client_id'],
-                'is_active': row_dict['punchout_time'] is None,  # Still punched in
+                'is_active': row_dict['punchout_time'] is None,
                 'created_at': row_dict['created_at'].isoformat() if row_dict['created_at'] else None,
                 'updated_at': row_dict['updated_at'].isoformat() if row_dict['updated_at'] else None
             }
@@ -920,6 +920,7 @@ def punchin_table(request):
     except Exception as e:
         logger.error(f"Error in punchin_table: {str(e)}")
         return Response({'error': 'Failed to get punch-in records'}, status=500)
+
 
 
 # ============================================================================

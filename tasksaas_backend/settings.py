@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     'item_orders',
     "settings_options",
     'sales_return',
+    'sales',
 
 ]
 

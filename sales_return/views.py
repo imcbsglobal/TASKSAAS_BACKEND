@@ -46,10 +46,29 @@ def create_sales_return(request):
         return JsonResponse({"success": False, "error": "items required"}, status=400)
 
     order_id = f"SR-{uuid.uuid4().hex[:10].upper()}"
-
     created_items = []
 
+    from decimal import Decimal
+
     for item in items:
+        # 🔹 ONLY FIX: quantity normalization
+        qty = item.get("quantity")
+
+        if isinstance(qty, str):
+            qty = qty.strip()
+            if qty.startswith("."):
+                qty = "0" + qty
+            if qty.endswith("."):
+                qty = qty + "0"
+
+        try:
+            quantity = Decimal(qty)
+        except Exception:
+            return JsonResponse({
+                "success": False,
+                "error": f"Invalid quantity value: {item.get('quantity')}"
+            }, status=400)
+
         sr = SalesReturn.objects.create(
             order_id=order_id,
 
@@ -62,7 +81,7 @@ def create_sales_return(request):
             barcode=item.get("barcode"),
 
             price=item.get("price"),
-            quantity=item.get("quantity"),
+            quantity=quantity,          # ✅ fixed here
             amount=item.get("amount"),
 
             # ✅ ITEM-LEVEL REMARK
@@ -86,6 +105,7 @@ def create_sales_return(request):
         "order_id": order_id,
         "items": created_items
     })
+
 
 
 # ---------------- LIST (UPLOADED ONLY) ----------------

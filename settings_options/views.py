@@ -5,7 +5,7 @@ import jwt
 
 from django.db import connection
 from .models import SettingsOptions
-
+from app1.models import AccMaster, AccProduct, AccProductBatch
 
 # =========================
 # Decode JWT
@@ -138,3 +138,57 @@ def settings_options_api(request):
             {"error": "Failed to save settings"},
             status=500
         )
+
+
+# =========================
+# Developer Options API
+# =========================
+@api_view(["POST"])
+def developer_options_api(request):
+    """
+    API for Level 3 users to clear specific tables for their client_id.
+    Actions:
+    1. clear_acc_master
+    2. clear_acc_product
+    3. clear_acc_productbatch
+    """
+    payload = decode_jwt_token(request)
+    if not payload:
+        return Response({"error": "Unauthorized"}, status=401)
+    
+    client_id = payload.get("client_id")
+    role = payload.get("role")  # expecting "Admin" which maps to Level 3 in backend logic
+
+    if not client_id:
+        return Response({"error": "Invalid token"}, status=401)
+    
+    # Strictly enforce role check. 
+    # In login view: role = "Admin" if (user.role == "level 3") else "User"
+    # So we check for "Admin" here to match the token payload.
+    if role != "Admin":
+        return Response({"error": "Permission denied. Level 3 access required."}, status=403)
+
+    action = request.data.get("action")
+    
+    if not action:
+         return Response({"error": "Action required"}, status=400)
+
+    try:
+        if action == "clear_acc_master":
+            count, _ = AccMaster.objects.filter(client_id=client_id).delete()
+            return Response({"success": True, "message": f"AccMaster cleared. {count} records deleted."})
+        
+        elif action == "clear_acc_product":
+            count, _ = AccProduct.objects.filter(client_id=client_id).delete()
+            return Response({"success": True, "message": f"AccProduct cleared. {count} records deleted."})
+        
+        elif action == "clear_acc_productbatch":
+            count, _ = AccProductBatch.objects.filter(client_id=client_id).delete()
+            return Response({"success": True, "message": f"AccProductBatch cleared. {count} records deleted."})
+        
+        else:
+            return Response({"error": "Invalid action"}, status=400)
+
+    except Exception as e:
+        print(f"DEVELOPER OPTION ERROR ({action}):", e)
+        return Response({"error": f"Failed to execute {action}: {str(e)}"}, status=500)

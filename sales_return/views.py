@@ -130,6 +130,46 @@ def sales_return_list(request):
     })
 
 
+
+@require_http_methods(["GET"])
+def sales_return_list_all(request):
+    payload, error = get_client_from_token(request)
+    if error:
+        return JsonResponse({"success": False, "error": error}, status=401)
+
+    returns = SalesReturn.objects.filter(
+        client_id=payload.get("client_id")
+    ).order_by('-id')
+
+    grouped = {}
+
+    for r in returns:
+        grouped.setdefault(r.order_id, {
+            "order_id": r.order_id,
+            "customer_name": r.customer_name,
+            "customer_code": r.customer_code,
+            "area": r.area,
+            "username": r.username,
+            "status": r.status,
+            "created_date": r.created_date.strftime('%Y-%m-%d'),
+            "created_time": r.created_time.strftime('%H:%M:%S'),
+            "items": []
+        })["items"].append({
+            "product_name": r.product_name,
+            "item_code": r.item_code,
+            "barcode": r.barcode,
+            "price": float(r.price),
+            "quantity": r.quantity,
+            "amount": float(r.amount),
+            "remark": r.product_remark
+        })
+
+    return JsonResponse({
+        "success": True,
+        "total": len(grouped),
+        "returns": list(grouped.values())
+    })
+
 # ---------------- STATUS CHANGE ----------------
 @csrf_exempt
 @require_http_methods(["POST"])

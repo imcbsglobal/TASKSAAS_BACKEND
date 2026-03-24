@@ -130,8 +130,7 @@ def settings_options_api(request):
 
             "price_codes": price_codes,
             "users": users,
-            "user_types": final_user_types,
-            "all_user_types": user_types
+            "user_types": final_user_types
         })
 
     # =====================

@@ -107,6 +107,14 @@ def settings_options_api(request):
             print("USER TYPES ERROR:", e)
             user_types = []
 
+        # Logic for "types" array output
+        # If a specific type is selected, output just that one. Otherwise, output all.
+        final_types_array = []
+        if options.user_type and options.user_type != "All":
+            final_types_array = [options.user_type]
+        else:
+            final_types_array = user_types
+
         return Response({
             "client_id": client_id,
             "order_rate_editable": options.order_rate_editable,
@@ -119,6 +127,7 @@ def settings_options_api(request):
             "default_print_form": options.default_print_form,
             "tax_type": options.tax_type,
             "user_type": options.user_type,
+            "types": final_types_array,
 
             "price_codes": price_codes,
             "users": users,

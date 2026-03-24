@@ -12,6 +12,15 @@ class SettingsOptions(models.Model):
     # ✅ NEW OPTION
     read_price_category = models.BooleanField(default=False)
     barcode_based_list = models.BooleanField(default=False)
+    default_print_form = models.CharField(
+        max_length=20,
+        default="form1"
+    )
+
+    tax_type = models.CharField(
+        max_length=20,
+        default="no_tax"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

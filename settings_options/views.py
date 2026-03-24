@@ -76,8 +76,8 @@ def settings_options_api(request):
                 users = [
                     {
                         "id": row[0],
-                        "username": row[0],     # id itself is username
-                        "role": row[1]          # role from DB
+                        "username": row[0],
+                        "role": row[1]
                     }
                     for row in cursor.fetchall()
                 ]
@@ -92,6 +92,11 @@ def settings_options_api(request):
             "barcode_based_list": options.barcode_based_list,
             "default_price_code": options.default_price_code,
             "protected_price_users": options.protected_price_users,
+
+            # ✅ NEW OPTIONS
+            "default_print_form": options.default_print_form,
+            "tax_type": options.tax_type,
+
             "price_codes": price_codes,
             "users": users
         })
@@ -123,6 +128,17 @@ def settings_options_api(request):
         options.barcode_based_list = request.data.get(
             "barcode_based_list",
             options.barcode_based_list
+        )
+
+        # ✅ NEW OPTIONS SAVE
+        options.default_print_form = request.data.get(
+            "default_print_form",
+            options.default_print_form
+        )
+
+        options.tax_type = request.data.get(
+            "tax_type",
+            options.tax_type
         )
 
         options.save()

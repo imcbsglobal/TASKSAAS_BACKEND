@@ -90,13 +90,12 @@ def settings_options_api(request):
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT DISTINCT TRIM(name)
+                    SELECT DISTINCT name
                     FROM acc_sales_types
-                    WHERE TRIM(LOWER(client_id)) = TRIM(LOWER(%s))
-                    AND name IS NOT NULL
+                    WHERE name IS NOT NULL
                     AND TRIM(name) != ''
-                    ORDER BY TRIM(name)
-                """, [str(client_id)])
+                    ORDER BY name
+                """)
 
                 user_types = [row[0] for row in cursor.fetchall()]
 

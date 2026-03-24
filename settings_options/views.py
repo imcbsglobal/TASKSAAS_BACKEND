@@ -87,20 +87,22 @@ def settings_options_api(request):
 
         # -------- USER TYPES --------
         # -------- USER TYPES --------
+        # -------- USER TYPES --------
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT DISTINCT name
                     FROM acc_sales_types
-                    WHERE LOWER(client_id) = LOWER(%s)
-                    AND name IS NOT NULL
-                    AND TRIM(name) != ''
+                    WHERE client_id ILIKE %s
+                    AND COALESCE(TRIM(name), '') != ''
                     ORDER BY name
                 """, [client_id])
 
                 user_types = [row[0] for row in cursor.fetchall()]
-                
-                print("USER TYPES FETCHED:", user_types)   # debug
+
+                print("CLIENT:", client_id)
+                print("USER TYPES:", user_types)
+
         except Exception as e:
             print("USER TYPES ERROR:", e)
             user_types = []

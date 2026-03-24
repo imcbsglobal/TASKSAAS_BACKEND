@@ -22,6 +22,13 @@ class SettingsOptions(models.Model):
         default="no_tax"
     )
 
+    user_type = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        default="All"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

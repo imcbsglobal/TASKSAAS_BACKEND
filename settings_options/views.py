@@ -85,6 +85,23 @@ def settings_options_api(request):
             print("USER ERROR:", e)
             users = []
 
+        # -------- USER TYPES --------
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT name
+                    FROM acc_sales_types
+                    WHERE client_id = %s AND name IS NOT NULL AND name != ''
+                    ORDER BY name
+                """, [client_id])
+
+                user_types = [
+                    row[0] for row in cursor.fetchall() if row[0]
+                ]
+        except Exception as e:
+            print("USER TYPES ERROR:", e)
+            user_types = []
+
         return Response({
             "client_id": client_id,
             "order_rate_editable": options.order_rate_editable,
@@ -96,9 +113,11 @@ def settings_options_api(request):
             # ✅ NEW OPTIONS
             "default_print_form": options.default_print_form,
             "tax_type": options.tax_type,
+            "user_type": options.user_type,
 
             "price_codes": price_codes,
-            "users": users
+            "users": users,
+            "user_types": user_types
         })
 
     # =====================
@@ -139,6 +158,11 @@ def settings_options_api(request):
         options.tax_type = request.data.get(
             "tax_type",
             options.tax_type
+        )
+
+        options.user_type = request.data.get(
+            "user_type",
+            options.user_type
         )
 
         options.save()

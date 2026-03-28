@@ -245,3 +245,52 @@ def developer_options_api(request):
     except Exception as e:
         print(f"DEVELOPER OPTION ERROR ({action}):", e)
         return Response({"error": f"Failed to execute {action}: {str(e)}"}, status=500)
+
+
+# =========================
+# Logo Upload API
+# =========================
+@api_view(["GET", "POST"])
+def logo_api(request):
+    payload = decode_jwt_token(request)
+    if not payload:
+        return Response({"error": "Unauthorized"}, status=401)
+    
+    client_id = payload.get("client_id")
+    if not client_id:
+        return Response({"error": "Invalid token"}, status=401)
+    
+    # Enforce admin only
+    role = payload.get("role")
+    if role and role.lower() != "admin":
+        return Response({"error": "Admin access required"}, status=403)
+        
+    options, _ = SettingsOptions.objects.get_or_create(client_id=client_id)
+    
+    if request.method == "GET":
+        url = options.logo.url if options.logo else None
+        return Response({"logo_url": url})
+        
+    if request.method == "POST":
+        image_file = request.FILES.get('logo')
+        if not image_file:
+            return Response({"error": "Logo image file is required"}, status=400)
+            
+        # Size validation (max 1 MB)
+        if image_file.size > 1 * 1024 * 1024:
+            return Response({"error": "Logo file size must not exceed 1 MB"}, status=400)
+            
+        # Optional: You can add FileExtensionValidator or specific mime type checks here
+        
+        # Save image (old one gets overwritten in field, wait, old file stays in R2 unless deleted)
+        # We can delete old one if needed, but the requirement is just "image should store claud flare"
+        # Since r2 setup handles it automatically we just assign it
+        options.logo = image_file
+        options.save()
+        
+        return Response({
+            "success": True,
+            "message": "Logo updated successfully",
+            "logo_url": options.logo.url if options.logo else None
+        })
+

@@ -9,6 +9,9 @@ class SettingsOptions(models.Model):
 
     protected_price_users = models.JSONField(default=dict)
 
+    # ✅ LOGO OPTION
+    logo = models.ImageField(upload_to='client_logos/', null=True, blank=True)
+
     # ✅ NEW OPTION
     read_price_category = models.BooleanField(default=False)
     barcode_based_list = models.BooleanField(default=False)

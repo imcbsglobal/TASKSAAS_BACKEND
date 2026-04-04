@@ -73,11 +73,13 @@ def settings_options_api(request):
                     ORDER BY id
                 """, [client_id])
 
+                remote_allowed = options.remote_punchin_users or []
                 users = [
                     {
                         "id": row[0],
                         "username": row[0],
-                        "role": row[1]
+                        "role": row[1],
+                        "remote_punchin_allow": True if row[0] in remote_allowed else False
                     }
                     for row in cursor.fetchall()
                 ]

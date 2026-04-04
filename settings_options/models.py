@@ -9,6 +9,9 @@ class SettingsOptions(models.Model):
 
     protected_price_users = models.JSONField(default=dict)
 
+    # ✅ REMOTE PUNCH IN
+    remote_punchin_users = models.JSONField(default=list, null=True, blank=True)
+
     # ✅ LOGO OPTION
     logo = models.ImageField(upload_to='client_logos/', null=True, blank=True)
 

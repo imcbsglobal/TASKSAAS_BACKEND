@@ -122,6 +122,7 @@ def settings_options_api(request):
             "barcode_based_list": options.barcode_based_list,
             "default_price_code": options.default_price_code,
             "protected_price_users": options.protected_price_users,
+            "remote_punchin_users": options.remote_punchin_users,
 
             # ✅ NEW OPTIONS
             "default_print_form": options.default_print_form,
@@ -155,6 +156,11 @@ def settings_options_api(request):
         options.protected_price_users = request.data.get(
             "protected_price_users",
             options.protected_price_users
+        )
+
+        options.remote_punchin_users = request.data.get(
+            "remote_punchin_users",
+            options.remote_punchin_users
         )
         
         options.barcode_based_list = request.data.get(
@@ -255,42 +261,43 @@ def logo_api(request):
     payload = decode_jwt_token(request)
     if not payload:
         return Response({"error": "Unauthorized"}, status=401)
-    
+
     client_id = payload.get("client_id")
     if not client_id:
         return Response({"error": "Invalid token"}, status=401)
-    
-    # Enforce admin only
-    role = payload.get("role")
-    if role and role.lower() != "admin":
-        return Response({"error": "Admin access required"}, status=403)
-        
+
+    role = payload.get("role", "")
     options, _ = SettingsOptions.objects.get_or_create(client_id=client_id)
-    
+
+    # ── GET: any logged-in user can read the logo ──────────────────
     if request.method == "GET":
-        url = options.logo.url if options.logo else None
+        url = options.logo if options.logo else None
         return Response({"logo_url": url})
-        
-    if request.method == "POST":
-        image_file = request.FILES.get('logo')
-        if not image_file:
-            return Response({"error": "Logo image file is required"}, status=400)
-            
-        # Size validation (max 1 MB)
-        if image_file.size > 1 * 1024 * 1024:
-            return Response({"error": "Logo file size must not exceed 1 MB"}, status=400)
-            
-        # Optional: You can add FileExtensionValidator or specific mime type checks here
-        
-        # Save image (old one gets overwritten in field, wait, old file stays in R2 unless deleted)
-        # We can delete old one if needed, but the requirement is just "image should store claud flare"
-        # Since r2 setup handles it automatically we just assign it
-        options.logo = image_file
-        options.save()
-        
-        return Response({
-            "success": True,
-            "message": "Logo updated successfully",
-            "logo_url": options.logo.url if options.logo else None
-        })
+
+    # ── POST: admin only ───────────────────────────────────────────
+    if role.lower() != "admin":
+        return Response({"error": "Admin access required"}, status=403)
+
+    image_file = request.FILES.get('logo')
+    if not image_file:
+        return Response({"error": "Logo image file is required"}, status=400)
+
+    # Size validation (max 1 MB)
+    if image_file.size > 1 * 1024 * 1024:
+        return Response({"error": "Logo file size must not exceed 1 MB"}, status=400)
+
+    # Allowed extensions
+    allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']
+    ext = image_file.name.rsplit('.', 1)[-1].lower()
+    if ext not in allowed_ext:
+        return Response({"error": f"File type '.{ext}' not allowed. Use JPG, PNG, GIF, SVG, or WebP."}, status=400)
+
+    options.logo = image_file
+    options.save()
+
+    return Response({
+        "success": True,
+        "message": "Logo updated successfully",
+        "logo_url": options.logo.name if options.logo else None
+    })
 

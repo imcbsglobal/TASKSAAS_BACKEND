@@ -605,7 +605,6 @@ def punchout(request, id):
             f"username={username} | requested_id={punchin_id}"
         )
 
-        # Find requested active punch
         active_punchin = (
             PunchIn.objects
             .filter(
@@ -618,7 +617,6 @@ def punchout(request, id):
             .first()
         )
 
-        # If requested id is wrong, find latest valid active punch
         latest_active = (
             PunchIn.objects
             .filter(
@@ -640,9 +638,9 @@ def punchout(request, id):
                         'client_id': client_id,
                         'username': username,
                         'note': (
-                            'Use latest_active_id for punchout. '
-                            'Requested record may already be punched out '
-                            'or belong to another user.'
+                            'Requested record may already be punched out, '
+                            'belong to another user, or the frontend is using '
+                            'an old punchin_id.'
                         )
                     }
                 },
@@ -660,19 +658,20 @@ def punchout(request, id):
 
             active_punchin.save(update_fields=['punchout_time', 'notes'])
 
-        # Get correct firm only for same client_id
+        # Get firm only for same client_id
         firm = AccMaster.objects.filter(
             code=active_punchin.firm_id,
             client_id=client_id
         ).first()
 
+        logger.info(
+            f"Firm lookup | firm_code={active_punchin.firm_id} | "
+            f"client_id={client_id} | "
+            f"firm_name={firm.name if firm else 'Unknown Store'}"
+        )
+
         work_duration = active_punchin.punchout_time - active_punchin.punchin_time
         hours = round(work_duration.total_seconds() / 3600, 2)
-
-        logger.info(
-            f"Punchout success | id={active_punchin.id} | "
-            f"user={username} | hours={hours}"
-        )
 
         return Response(
             {
@@ -693,7 +692,8 @@ def punchout(request, id):
 
     except DatabaseError as e:
         logger.exception(
-            f"Database error in punchout | client_id={client_id if 'client_id' in locals() else None}"
+            f"Database error in punchout | "
+            f"client_id={client_id if 'client_id' in locals() else None}"
         )
         return Response(
             {

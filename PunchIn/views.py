@@ -660,87 +660,155 @@ def get_active_punchin(request):
     Get current punch status for authenticated user
     """
     try:
-        # ✅ Authenticate user
         payload = decode_jwt_token(request)
         if not payload:
-            return Response({'error': 'Authentication required'}, status=401)
-        
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         client_id = payload.get('client_id')
         username = payload.get('username')
 
         if not client_id or not username:
-            return Response({'error': 'Invalid token payload'}, status=401)
+            return Response(
+                {'error': 'Invalid token payload'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        # ✅ Check today's punch status
         from django.utils import timezone
         today = timezone.now().date()
-        
-        active_punchin = PunchIn.objects.filter(
-            client_id=client_id,
-            created_by=username,
-            punchin_time__date=today,
-            punchout_time__isnull=True
-        ).first()
+
+        logger.info(
+            f"Punch status request | client_id={client_id} | username={username}"
+        )
+
+        # Find latest active punch-in for this client + user only
+        active_punchin = (
+            PunchIn.objects
+            .filter(
+                client_id=client_id,
+                created_by__iexact=username,
+                punchin_time__date=today,
+                punchout_time__isnull=True
+            )
+            .order_by('-punchin_time')
+            .first()
+        )
 
         if active_punchin:
-            # User is currently punched in
             work_duration = timezone.now() - active_punchin.punchin_time
-            hours = work_duration.total_seconds() / 3600
-            
-            # Photo URL from Cloudflare R2
-            photo_url = active_punchin.photo.url if active_punchin.photo else None
+            hours = round(work_duration.total_seconds() / 3600, 2)
 
-            response_data = {
-                'success': True,
-                'is_punched_in': True,
-                'data': {
-                    'punchin_id': active_punchin.id,
-                    'firm_name': active_punchin.firm.name,
-                    'firm_code': active_punchin.firm.code,
-                    'punchin_time': active_punchin.punchin_time.isoformat(),
-                    'current_work_hours': round(hours, 2),
-                    'seconds':work_duration,
-                    'photo_url': photo_url,
-                    'address': active_punchin.address,
-                    'status': active_punchin.status
-                }
-            }
-        else:
-            # Check if user has completed punch today
-            completed_today = PunchIn.objects.filter(
-                client_id=client_id,
-                created_by=username,
-                punchin_time__date=today,
-                punchout_time__isnull=False
+            # Get correct firm only from this client_id
+            firm = AccMaster.objects.filter(
+                code=active_punchin.firm_id,
+                client_id=client_id
             ).first()
 
-            response_data = {
-                'success': True,
-                'is_punched_in': False,
-                'completed_today': completed_today is not None,
-                'data': None
+            logger.info(
+                f"Active punch found | punchin_id={active_punchin.id} | "
+                f"firm_id={active_punchin.firm_id} | "
+                f"firm_name={firm.name if firm else 'None'}"
+            )
+
+            # Safe photo url
+            photo_url = None
+            try:
+                if active_punchin.photo:
+                    photo_url = active_punchin.photo.url
+            except Exception as photo_error:
+                logger.warning(
+                    f"Photo URL error for punchin {active_punchin.id}: {photo_error}"
+                )
+
+            return Response(
+                {
+                    'success': True,
+                    'is_punched_in': True,
+                    'data': {
+                        'punchin_id': active_punchin.id,
+                        'firm_name': firm.name if firm else 'Unknown Store',
+                        'firm_code': firm.code if firm else None,
+                        'punchin_time': active_punchin.punchin_time.isoformat(),
+                        'current_work_hours': hours,
+                        'seconds': int(work_duration.total_seconds()),
+                        'photo_url': photo_url,
+                        'address': active_punchin.address or '',
+                        'status': active_punchin.status or 'pending',
+                        'created_by': active_punchin.created_by
+                    }
+                },
+                status=status.HTTP_200_OK
+            )
+
+        # If no active punch-in, check completed punch today
+        completed_today = (
+            PunchIn.objects
+            .filter(
+                client_id=client_id,
+                created_by__iexact=username,
+                punchin_time__date=today,
+                punchout_time__isnull=False
+            )
+            .order_by('-punchout_time')
+            .first()
+        )
+
+        response_data = {
+            'success': True,
+            'is_punched_in': False,
+            'completed_today': completed_today is not None,
+            'data': None
+        }
+
+        if completed_today:
+            work_duration = completed_today.punchout_time - completed_today.punchin_time
+            hours = round(work_duration.total_seconds() / 3600, 2)
+
+            # Get correct firm only from same client_id
+            firm = AccMaster.objects.filter(
+                code=completed_today.firm_id,
+                client_id=client_id
+            ).first()
+
+            response_data['data'] = {
+                'punchin_id': completed_today.id,
+                'firm_name': firm.name if firm else 'Unknown Store',
+                'firm_code': firm.code if firm else None,
+                'punchin_time': completed_today.punchin_time.isoformat(),
+                'punchout_time': completed_today.punchout_time.isoformat(),
+                'total_work_hours': hours,
+                'status': completed_today.status or 'pending'
             }
 
-            if completed_today:
-                work_duration = completed_today.punchout_time - completed_today.punchin_time
-                hours = work_duration.total_seconds() / 3600
-                response_data['data'] = {
-                    'punchin_id': completed_today.id,
-                    'firm_name': completed_today.firm.name,
-                    'punchin_time': completed_today.punchin_time.isoformat(),
-                    'punchout_time': completed_today.punchout_time.isoformat(),
-                    'total_work_hours': round(hours, 2),
-                    'status': completed_today.status
-                }
-
-        return Response(response_data, status=200)
+        return Response(response_data, status=status.HTTP_200_OK)
 
     except DatabaseError as e:
-        logger.error(f"Database error in get_punch_status: {str(e)}")
-        return Response({'error': 'Database error'}, status=500)
+        logger.exception(
+            f"Database error in get_active_punchin | "
+            f"client_id={client_id if 'client_id' in locals() else None}"
+        )
+        return Response(
+            {
+                'error': 'Database error',
+                'details': str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
     except Exception as e:
-        logger.error(f"Error in get_punch_status for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
-        return Response({'error': 'Failed to get punch status'}, status=500)
+        logger.exception(
+            f"Unexpected error in get_active_punchin | "
+            f"user={username if 'username' in locals() else 'unknown'}"
+        )
+        return Response(
+            {
+                'error': 'Failed to get punch status',
+                'details': str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])

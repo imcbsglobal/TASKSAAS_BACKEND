@@ -579,79 +579,142 @@ def punchout(request, id):
     Handle punch-out functionality
     """
     try:
-        # ✅ Authenticate user
         payload = decode_jwt_token(request)
         if not payload:
-            return Response({'error': 'Authentication required'}, status=401)
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
         client_id = payload.get('client_id')
         username = payload.get('username')
 
         if not client_id or not username:
-            return Response({'error': 'Invalid token payload'}, status=401)
+            return Response(
+                {'error': 'Invalid token payload'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        # ✅ Use ID from URL parameter
-        punchinId = id
-
-        # ✅ Get optional data from request body
+        punchin_id = id
         notes = request.data.get('notes', '')
 
-        # ✅ Find active punch-in record (must be punched in and not punched out yet)
         from django.utils import timezone
-        today = timezone.now().date()
 
-        active_punchin = PunchIn.objects.filter(
-            id=punchinId,
-            client_id=client_id,
-            created_by=username,
-            punchout_time__isnull=True  # Must not be punched out yet
-        ).first()
+        logger.info(
+            f"Punchout request | client_id={client_id} | "
+            f"username={username} | requested_id={punchin_id}"
+        )
+
+        # Find requested active punch
+        active_punchin = (
+            PunchIn.objects
+            .filter(
+                id=punchin_id,
+                client_id=client_id,
+                created_by__iexact=username,
+                punchout_time__isnull=True
+            )
+            .order_by('-punchin_time')
+            .first()
+        )
+
+        # If requested id is wrong, find latest valid active punch
+        latest_active = (
+            PunchIn.objects
+            .filter(
+                client_id=client_id,
+                created_by__iexact=username,
+                punchout_time__isnull=True
+            )
+            .order_by('-punchin_time')
+            .first()
+        )
 
         if not active_punchin:
-            return Response({
-                'error': 'No active punch-in found with the provided ID',
-                'details': {
-                    'punchin_id': punchinId,
-                    'client_id': client_id,
-                    'username': username,
-                    'note': 'Record may already be punched out or belong to different user'
-                }
-            }, status=400)
+            return Response(
+                {
+                    'error': 'No active punch-in found with the provided ID',
+                    'details': {
+                        'requested_id': punchin_id,
+                        'latest_active_id': latest_active.id if latest_active else None,
+                        'client_id': client_id,
+                        'username': username,
+                        'note': (
+                            'Use latest_active_id for punchout. '
+                            'Requested record may already be punched out '
+                            'or belong to another user.'
+                        )
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # ✅ Update punch-out time
         with transaction.atomic():
             active_punchin.punchout_time = timezone.now()
+
             if notes:
-                active_punchin.notes = (active_punchin.notes + f"\nPunch-out notes: {notes}").strip()
-            active_punchin.save()
+                existing_notes = active_punchin.notes or ''
+                active_punchin.notes = (
+                    f"{existing_notes}\nPunch-out notes: {notes}"
+                ).strip()
 
-            logger.info(f"Punch-out recorded successfully for user {username}, ID: {active_punchin.id}")
+            active_punchin.save(update_fields=['punchout_time', 'notes'])
 
-        # ✅ Calculate work duration
+        # Get correct firm only for same client_id
+        firm = AccMaster.objects.filter(
+            code=active_punchin.firm_id,
+            client_id=client_id
+        ).first()
+
         work_duration = active_punchin.punchout_time - active_punchin.punchin_time
-        hours = work_duration.total_seconds() / 3600
+        hours = round(work_duration.total_seconds() / 3600, 2)
 
-        response_data = {
-            'success': True,
-            'message': 'Punch-out recorded successfully',
-            'data': {
-                'punchin_id': active_punchin.id,
-                'firm_name': active_punchin.firm.name,
-                'punchin_time': active_punchin.punchin_time.isoformat(),
-                'punchout_time': active_punchin.punchout_time.isoformat(),
-                'work_duration_hours': round(hours, 2),
-                'status': active_punchin.status
-            }
-        }
+        logger.info(
+            f"Punchout success | id={active_punchin.id} | "
+            f"user={username} | hours={hours}"
+        )
 
-        return Response(response_data, status=200)
+        return Response(
+            {
+                'success': True,
+                'message': 'Punch-out recorded successfully',
+                'data': {
+                    'punchin_id': active_punchin.id,
+                    'firm_name': firm.name if firm else 'Unknown Store',
+                    'firm_code': firm.code if firm else None,
+                    'punchin_time': active_punchin.punchin_time.isoformat(),
+                    'punchout_time': active_punchin.punchout_time.isoformat(),
+                    'work_duration_hours': hours,
+                    'status': active_punchin.status or 'pending'
+                }
+            },
+            status=status.HTTP_200_OK
+        )
 
     except DatabaseError as e:
-        logger.error(f"Database error in punchout: {str(e)}")
-        return Response({'error': 'Database operation failed'}, status=500)
+        logger.exception(
+            f"Database error in punchout | client_id={client_id if 'client_id' in locals() else None}"
+        )
+        return Response(
+            {
+                'error': 'Database operation failed',
+                'details': str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
     except Exception as e:
-        logger.error(f"Error in punchout for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
-        return Response({'error': 'Punch-out failed'}, status=500)
+        logger.exception(
+            f"Unexpected error in punchout | "
+            f"user={username if 'username' in locals() else 'unknown'}"
+        )
+        return Response(
+            {
+                'error': 'Punch-out failed',
+                'details': str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(['GET'])

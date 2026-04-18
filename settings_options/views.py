@@ -273,7 +273,7 @@ def logo_api(request):
 
     # ── GET: any logged-in user can read the logo ──────────────────
     if request.method == "GET":
-        url = options.logo if options.logo else None
+        url = options.logo.url if options.logo else None
         return Response({"logo_url": url})
 
     # ── POST: admin only ───────────────────────────────────────────
@@ -300,6 +300,55 @@ def logo_api(request):
     return Response({
         "success": True,
         "message": "Logo updated successfully",
-        "logo_url": options.logo.name if options.logo else None
+        "logo_url": options.logo.url if options.logo else None
+    })
+
+
+# =========================
+# Bank QR Upload API
+# =========================
+@api_view(["GET", "POST"])
+def bank_qr_api(request):
+    payload = decode_jwt_token(request)
+    if not payload:
+        return Response({"error": "Unauthorized"}, status=401)
+
+    client_id = payload.get("client_id")
+    if not client_id:
+        return Response({"error": "Invalid token"}, status=401)
+
+    role = payload.get("role", "")
+    options, _ = SettingsOptions.objects.get_or_create(client_id=client_id)
+
+    # ── GET: any logged-in user can read the bank QR ──────────────────
+    if request.method == "GET":
+        url = options.bank_qr.url if options.bank_qr else None
+        return Response({"bank_qr_url": url})
+
+    # ── POST: admin only ───────────────────────────────────────────
+    if role.lower() != "admin":
+        return Response({"error": "Admin access required"}, status=403)
+
+    image_file = request.FILES.get('bank_qr')
+    if not image_file:
+        return Response({"error": "Bank QR image file is required"}, status=400)
+
+    # Size validation (max 1 MB)
+    if image_file.size > 1 * 1024 * 1024:
+        return Response({"error": "Bank QR file size must not exceed 1 MB"}, status=400)
+
+    # Allowed extensions
+    allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp']
+    ext = image_file.name.rsplit('.', 1)[-1].lower()
+    if ext not in allowed_ext:
+        return Response({"error": f"File type '.{ext}' not allowed. Use JPG, PNG, GIF, SVG, or WebP."}, status=400)
+
+    options.bank_qr = image_file
+    options.save()
+
+    return Response({
+        "success": True,
+        "message": "Bank QR updated successfully",
+        "bank_qr_url": options.bank_qr.url if options.bank_qr else None
     })
 

@@ -14,6 +14,7 @@ class SettingsOptions(models.Model):
 
     # ✅ LOGO OPTION
     logo = models.ImageField(upload_to='client_logos/', null=True, blank=True)
+    bank_qr = models.ImageField(upload_to='bank_qrs/', null=True, blank=True)
 
     # ✅ NEW OPTION
     read_price_category = models.BooleanField(default=False)

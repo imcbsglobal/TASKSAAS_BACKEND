@@ -36,6 +36,7 @@ urlpatterns = [
     path("api/settings/", include("settings_options.urls")),
     path("api/sales-return/", include("sales_return.urls")),
     path("api/sales/", include("sales.urls")),
+    path('api/accgoddownstock/', include('accgoddownstock.urls')),
 
 
 

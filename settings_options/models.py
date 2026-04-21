@@ -29,11 +29,10 @@ class SettingsOptions(models.Model):
         default="no_tax"
     )
 
-    user_type = models.CharField(
-        max_length=150,
+    user_type = models.JSONField(
+        default=dict,
         blank=True,
-        null=True,
-        default="All"
+        null=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

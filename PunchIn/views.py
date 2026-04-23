@@ -457,7 +457,7 @@ def punchin(request):
         address = request.data.get('address', '')
         image_file = request.FILES.get('image')
 
-        # ✅ NEW REQUIRED FIELDS (ONLY ADDITION)
+        # ✅ KEEP SAME (for compatibility)
         current_location = request.data.get('current_location')
         shop_location = request.data.get('shop_location')
         punchin_status = request.data.get('punchin_status')
@@ -472,7 +472,6 @@ def punchin(request):
         if not image_file:
             return Response({'error': 'Image file is required for punch-in'}, status=400)
 
-        # ✅ NEW validations
         if not current_location:
             return Response({'error': 'current_location is required'}, status=400)
 
@@ -483,7 +482,7 @@ def punchin(request):
             return Response({'error': 'punchin_status is required'}, status=400)
 
         # 🖼️ Image validation (unchanged)
-        max_size = 5 * 1024 * 1024  # 5MB
+        max_size = 5 * 1024 * 1024
         if image_file.size > max_size:
             return Response({'error': 'Image size must be less than 5MB'}, status=400)
 
@@ -506,9 +505,39 @@ def punchin(request):
         except AccMaster.DoesNotExist:
             return Response({'error': 'Invalid firm code for this client'}, status=404)
 
+        # ============================
+        # ✅ ONLY CHANGE: LOCATION CHECK
+        # ============================
+        import math
+
+        def calculate_distance(lat1, lon1, lat2, lon2):
+            R = 6371000
+            lat1, lon1, lat2, lon2 = map(math.radians, map(float, [lat1, lon1, lat2, lon2]))
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = math.sin(dlat/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2)**2
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+            return R * c
+
+        try:
+            cur_lat, cur_lon = current_location.split(',')
+            shop_lat, shop_lon = shop_location.split(',')
+
+            distance = calculate_distance(cur_lat, cur_lon, shop_lat, shop_lon)
+
+            if distance > 100:
+                punchin_status = "Mismatch Location"
+            else:
+                punchin_status = "Correct Location"
+
+        except Exception:
+            # fallback (keep original value if something fails)
+            punchin_status = punchin_status
+
         # 🕒 Existing punch-in check (unchanged)
         from django.utils import timezone
         today = timezone.now().date()
+
         existing_punchin = PunchIn.objects.filter(
             client_id=client_id,
             created_by=username,
@@ -523,24 +552,22 @@ def punchin(request):
                 client_id=client_id,
                 latitude=lat,
                 longitude=lng,
-
-                # ✅ NEW FIELDS STORED
                 current_location=current_location,
                 shop_location=shop_location,
+
+                # ✅ FINAL STATUS (ONLY THIS CHANGED)
                 punchin_status=punchin_status,
 
                 photo=image_file,
                 address=address,
                 notes=notes,
                 created_by=username,
-
-                # ❌ OLD STATUS UNCHANGED
                 status='pending'
             )
 
             logger.info(f"Punch-in created successfully for user {username}, ID: {punchin_record.id}")
 
-        # ✅ Response (extended, old keys untouched)
+        # ✅ Response (unchanged)
         photo_url = punchin_record.photo.url if punchin_record.photo else None
         
         response_data = {
@@ -568,6 +595,7 @@ def punchin(request):
     except DatabaseError as e:
         logger.error(f"Database error in punchin: {str(e)}")
         return Response({'error': 'Database operation failed'}, status=500)
+
     except Exception as e:
         logger.error(f"Error in punchin for user {username if 'username' in locals() else 'unknown'}: {str(e)}")
         return Response({'error': 'Punch-in failed'}, status=500)
